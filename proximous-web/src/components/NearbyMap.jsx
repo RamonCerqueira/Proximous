@@ -17,7 +17,8 @@ import {
   Zap,
   Coffee,
   Compass,
-  UserPlus
+  UserPlus,
+  Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usersAPI, activitiesAPI } from '@/lib/api';
@@ -53,7 +54,7 @@ function MapController({ center, zoom = 14 }) {
 
 // Custom Marker for Nearby Users
 const createAvatarIcon = (photoUrl, gender) => {
-  const borderColor = gender === 'female' ? '#ec4899' : '#6366f1';
+  const borderColor = gender === 'female' ? '#FF4FA3' : '#9B20F0';
   return L.divIcon({
     className: 'custom-avatar-marker',
     html: `
@@ -63,8 +64,8 @@ const createAvatarIcon = (photoUrl, gender) => {
         height: 48px;
         border-radius: 50%;
         border: 3.5px solid ${borderColor};
-        box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-        background-color: white;
+        box-shadow: 0 4px 20px rgba(155, 32, 240, 0.5);
+        background-color: #100D21;
         overflow: hidden;
         cursor: pointer;
         transition: transform 0.2s ease;
@@ -76,8 +77,8 @@ const createAvatarIcon = (photoUrl, gender) => {
           right: 2px;
           width: 11px;
           height: 11px;
-          background-color: #22c55e;
-          border: 2px solid white;
+          background-color: #35E38A;
+          border: 2px solid #070611;
           border-radius: 50%;
         "></div>
       </div>
@@ -103,22 +104,22 @@ const createEventIcon = (category) => {
   return L.divIcon({
     className: 'custom-event-marker',
     html: `
-      <div style="position: relative; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
         <div style="
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(168, 85, 247, 0.4);
+          background: rgba(255, 43, 104, 0.4);
           animation: ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
         "></div>
         <div style="
           position: relative;
-          width: 42px;
-          height: 42px;
-          background: linear-gradient(135deg, #9333ea 0%, #c026d3 50%, #e11d48 100%);
-          border: 3px solid white;
+          width: 44px;
+          height: 44px;
+          background: linear-gradient(135deg, #FF2B68 0%, #D414A8 50%, #9B20F0 100%);
+          border: 3px solid #ffffff;
           border-radius: 50%;
-          box-shadow: 0 4px 20px rgba(192, 38, 211, 0.6);
+          box-shadow: 0 4px 22px rgba(255, 43, 104, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -129,9 +130,9 @@ const createEventIcon = (category) => {
         </div>
       </div>
     `,
-    iconSize: [46, 46],
-    iconAnchor: [23, 23],
-    popupAnchor: [0, -23]
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
+    popupAnchor: [0, -24]
   });
 };
 
@@ -145,17 +146,17 @@ const createSelfIcon = () => {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(236, 72, 153, 0.4);
+          background: rgba(155, 32, 240, 0.4);
           animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
         "></div>
         <div style="
           position: relative;
           width: 44px;
           height: 44px;
-          background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+          background: linear-gradient(135deg, #9B20F0 0%, #FF4FA3 100%);
           border: 3.5px solid white;
           border-radius: 50%;
-          box-shadow: 0 0 25px rgba(236, 72, 153, 0.8);
+          box-shadow: 0 0 25px rgba(155, 32, 240, 0.8);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -172,14 +173,14 @@ const createSelfIcon = () => {
   });
 };
 
-const NearbyMap = ({ radius = 15 }) => {
+const NearbyMap = ({ radius = 15, fullHeight = false }) => {
   const navigate = useNavigate();
   const [selectedRadius, setSelectedRadius] = useState(radius);
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'people' | 'events' | 'coffee'
 
   const defaultLocation = [-23.5505, -46.6333];
   const [myLocation, setMyLocation] = useState(defaultLocation);
   const [gpsStatus, setGpsStatus] = useState('locating');
-  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Live real data
   const [realUsers, setRealUsers] = useState([]);
@@ -207,7 +208,6 @@ const NearbyMap = ({ radius = 15 }) => {
         const newCoords = [latitude, longitude];
         setMyLocation(newCoords);
         setGpsStatus('active');
-        setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
         try {
           await usersAPI.updateProfile({ latitude, longitude });
@@ -251,84 +251,160 @@ const NearbyMap = ({ radius = 15 }) => {
 
   const [lat, lng] = myLocation;
 
-  const mapUsersList = realUsers.map(u => ({
+  // Fallback demo users & events if backend returns empty lists
+  const defaultEvents = [
+    {
+      id: 'map-evt-1',
+      title: '☕ Tomando café no Centro',
+      category: 'coffee',
+      location_name: 'Pinheiros, SP',
+      scheduled_time: 'Hoje às 17:30',
+      latitude: lat + 0.003,
+      longitude: lng + 0.004,
+      participant_count: 1,
+      max_participants: 2
+    },
+    {
+      id: 'map-evt-2',
+      title: '🏃 Caminhada no Parque',
+      category: 'sports',
+      location_name: 'Parque Ibirapuera',
+      scheduled_time: 'Amanhã às 09:00',
+      latitude: lat - 0.004,
+      longitude: lng - 0.003,
+      participant_count: 2,
+      max_participants: 4
+    }
+  ];
+
+  const defaultUsers = [
+    {
+      id: 'map-u1',
+      name: 'Mariana',
+      age: 24,
+      gender: 'female',
+      profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200',
+      latitude: lat + 0.002,
+      longitude: lng - 0.003,
+      bio: 'Adoro conversas tranquilas e cafés acolhedores.'
+    },
+    {
+      id: 'map-u2',
+      name: 'Lucas',
+      age: 27,
+      gender: 'male',
+      profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
+      latitude: lat - 0.003,
+      longitude: lng + 0.005,
+      bio: 'Fotografia urbana e caminhadas no fim de tarde.'
+    }
+  ];
+
+  const mapEventsList = realEvents.length > 0 ? realEvents : defaultEvents;
+  const rawUsersList = realUsers.length > 0 ? realUsers : defaultUsers;
+
+  const mapUsersList = rawUsersList.map(u => ({
     ...u,
     lat: u.latitude || lat,
     lng: u.longitude || lng,
     distance: calculateHaversine(lat, lng, u.latitude || lat, u.longitude || lng)
   }));
 
+  // Quick Filter Logic
+  const displayEvents = (filterMode === 'all' || filterMode === 'events' || filterMode === 'coffee')
+    ? (filterMode === 'coffee' ? mapEventsList.filter(e => e.category === 'coffee') : mapEventsList)
+    : [];
+
+  const displayUsers = (filterMode === 'all' || filterMode === 'people') ? mapUsersList : [];
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl border border-purple-100 bg-white">
+    <div className={`relative w-full ${fullHeight ? 'h-full flex-1 flex flex-col' : 'rounded-3xl overflow-hidden shadow-2xl border border-[#30204D] bg-[#070611]'}`}>
       
-      {/* Map Header & Controls */}
-      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none">
-        {/* Live GPS & Item Count Indicator */}
-        <div className="bg-white/95 backdrop-blur-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-lg border border-purple-100 flex items-center justify-between sm:justify-start gap-2 pointer-events-auto">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {gpsStatus === 'active' ? (
-              <>
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <span className="text-[11px] sm:text-xs font-bold text-gray-800 block truncate">Pessoas & Eventos</span>
-                  <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium block truncate">GPS ({lastUpdated || 'Ativo'})</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 text-purple-600 animate-spin flex-shrink-0" />
-                <span className="text-xs font-bold text-purple-700 truncate">Obtendo Posição...</span>
-              </>
-            )}
-          </div>
+      {/* Quick Filter Bar & Radius Controls */}
+      <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none">
+        
+        {/* Quick Filter Pills (Todos, Pessoas, Eventos, Cafés) */}
+        <div className="bg-[#0D0A1C]/90 backdrop-blur-md p-1 rounded-full border border-[#30204D] shadow-xl flex items-center gap-1 pointer-events-auto">
+          <button
+            onClick={() => setFilterMode('all')}
+            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+              filterMode === 'all' 
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#D414A8] text-white shadow-md' 
+                : 'text-[#AAA5BA] hover:text-white'
+            }`}
+          >
+            ✨ Todos ({mapUsersList.length + mapEventsList.length})
+          </button>
 
-          <div className="flex gap-1 flex-shrink-0">
-            <Badge className="bg-purple-100 text-purple-700 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5">
-              👥 {mapUsersList.length}
-            </Badge>
-            <Badge className="bg-pink-100 text-pink-700 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5">
-              🎉 {realEvents.length}
-            </Badge>
-          </div>
+          <button
+            onClick={() => setFilterMode('people')}
+            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+              filterMode === 'people' 
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#FF4FA3] text-white shadow-md' 
+                : 'text-[#AAA5BA] hover:text-white'
+            }`}
+          >
+            👥 Pessoas ({mapUsersList.length})
+          </button>
+
+          <button
+            onClick={() => setFilterMode('events')}
+            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+              filterMode === 'events' 
+                ? 'bg-gradient-to-r from-[#FF2B68] to-[#D414A8] text-white shadow-md' 
+                : 'text-[#AAA5BA] hover:text-white'
+            }`}
+          >
+            🎉 Eventos ({mapEventsList.length})
+          </button>
+
+          <button
+            onClick={() => setFilterMode('coffee')}
+            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+              filterMode === 'coffee' 
+                ? 'bg-gradient-to-r from-[#10B981] to-[#35E38A] text-white shadow-md' 
+                : 'text-[#AAA5BA] hover:text-white'
+            }`}
+          >
+            ☕ Cafés
+          </button>
         </div>
 
-        {/* Action Controls & Radius Selector */}
-        <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 pointer-events-auto">
-          <Button
-            onClick={requestLiveLocation}
-            size="sm"
-            className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-white/90 backdrop-blur-md text-purple-700 border border-purple-200 hover:bg-purple-50 shadow-md text-[11px] sm:text-xs font-bold flex items-center gap-1 flex-shrink-0"
-          >
-            <Crosshair className="h-3.5 w-3.5 text-pink-500" />
-            <span className="hidden xs:inline">Minha Posição</span>
-            <span className="xs:hidden">GPS</span>
-          </Button>
-
-          <div className="bg-white/95 backdrop-blur-md p-1 rounded-2xl shadow-lg border border-purple-100 flex items-center gap-0.5 sm:gap-1">
+        {/* Radius Selector Pills */}
+        <div className="flex items-center justify-end gap-1.5 pointer-events-auto">
+          <div className="bg-[#0D0A1C]/90 backdrop-blur-md p-1 rounded-full shadow-xl border border-[#30204D] flex items-center gap-1">
             {[5, 15, 30, 50].map((r) => (
               <button
                 key={r}
                 onClick={() => setSelectedRadius(r)}
-                className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-extrabold transition-all ${
                   selectedRadius === r
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-[#9B20F0] to-[#D414A8] text-white shadow-sm'
+                    : 'text-[#AAA5BA] hover:text-white'
                 }`}
               >
                 {r}km
               </button>
             ))}
           </div>
+
+          <Button
+            onClick={requestLiveLocation}
+            size="sm"
+            className="h-8 px-2.5 rounded-full bg-[#0D0A1C]/90 backdrop-blur-md text-white border border-[#30204D] hover:border-[#9B20F0] text-xs font-bold flex items-center gap-1 shadow-xl"
+            title="Recentrar Posição"
+          >
+            <Crosshair className="h-3.5 w-3.5 text-[#FF4FA3]" />
+          </Button>
         </div>
       </div>
 
-      {/* Leaflet Map Component */}
-      <div className="h-[340px] sm:h-[460px] md:h-[540px] w-full z-10">
+      {/* Leaflet Map Component (Taking 100% Height when fullHeight is true) */}
+      <div className={`w-full z-10 ${fullHeight ? 'h-full flex-1 min-h-[450px]' : 'h-[360px] sm:h-[480px]'}`}>
         <MapContainer
           center={myLocation}
           zoom={14}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
           className="h-full w-full"
         >
           <MapController center={myLocation} zoom={14} />
@@ -338,16 +414,16 @@ const NearbyMap = ({ radius = 15 }) => {
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
 
-          {/* User's Live Position Marker */}
+          {/* User's Current Position Marker */}
           <Marker position={myLocation} icon={createSelfIcon()}>
             <Popup className="custom-leaflet-popup">
               <div className="p-2.5 text-center">
-                <p className="font-extrabold text-purple-700 text-sm flex items-center justify-center gap-1">
-                  <Sparkles className="h-4 w-4 text-pink-500" />
-                  Sua Posição Atual
+                <p className="font-extrabold text-[#9B20F0] text-sm flex items-center justify-center gap-1">
+                  <Sparkles className="h-4 w-4 text-[#FF4FA3]" />
+                  Sua Posição
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Buscando pessoas e encontros em um raio de {selectedRadius} km
+                <p className="text-xs text-slate-600 mt-1">
+                  Exibindo pessoas e eventos num raio de {selectedRadius} km
                 </p>
               </div>
             </Popup>
@@ -358,42 +434,42 @@ const NearbyMap = ({ radius = 15 }) => {
             center={myLocation}
             radius={selectedRadius * 1000}
             pathOptions={{
-              color: '#ec4899',
-              fillColor: '#ec4899',
-              fillOpacity: 0.06,
-              weight: 2.5,
-              dashArray: '8, 8'
+              color: '#9B20F0',
+              fillColor: '#9B20F0',
+              fillOpacity: 0.07,
+              weight: 2,
+              dashArray: '6, 6'
             }}
           />
 
-          {/* 1. Render Real Events/Convites Markers */}
-          {realEvents.map((evt) => (
+          {/* 1. Render Events/Convites Markers */}
+          {displayEvents.map((evt) => (
             <Marker
               key={evt.id}
               position={[evt.latitude || lat + 0.003, evt.longitude || lng + 0.004]}
               icon={createEventIcon(evt.category)}
             >
               <Popup className="custom-leaflet-popup">
-                <div className="p-3 max-w-[230px] text-center space-y-2">
-                  <Badge className="bg-purple-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                <div className="p-3 max-w-[220px] text-center space-y-2">
+                  <Badge className="bg-[#FF2B68] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                     🎉 {evt.category || 'Convite'}
                   </Badge>
 
-                  <h4 className="font-extrabold text-gray-900 text-sm leading-tight">
+                  <h4 className="font-extrabold text-slate-900 text-sm leading-tight">
                     {evt.title}
                   </h4>
 
-                  <div className="text-[11px] text-gray-600 space-y-1 font-medium text-left bg-purple-50 p-2 rounded-xl border border-purple-100">
+                  <div className="text-[11px] text-slate-700 space-y-1 font-medium text-left bg-purple-50 p-2 rounded-xl border border-purple-100">
                     <p className="flex items-center gap-1 text-purple-700 font-bold">
-                      <MapPin className="h-3 w-3 text-purple-500" />
+                      <MapPin className="h-3 w-3 text-[#9B20F0]" />
                       <span>{evt.location_name || 'São Paulo'}</span>
                     </p>
                     <p className="flex items-center gap-1 text-emerald-700 font-bold">
-                      <Clock className="h-3 w-3 text-emerald-500" />
+                      <Clock className="h-3 w-3 text-emerald-600" />
                       <span>{evt.scheduled_time || 'Hoje'}</span>
                     </p>
                     <p className="flex items-center gap-1 text-pink-700 font-bold">
-                      <Users className="h-3 w-3 text-pink-500" />
+                      <Users className="h-3 w-3 text-[#FF4FA3]" />
                       <span>{evt.participant_count || 1}/{evt.max_participants || 2} Vagas</span>
                     </p>
                   </div>
@@ -401,7 +477,7 @@ const NearbyMap = ({ radius = 15 }) => {
                   <Button
                     onClick={() => handleJoinEventFromMap(evt.id)}
                     size="sm"
-                    className="w-full h-8 text-xs bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white font-black rounded-xl shadow-md hover:opacity-95 flex items-center justify-center gap-1"
+                    className="w-full h-8 text-xs bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white font-black rounded-xl shadow-md hover:opacity-95 flex items-center justify-center gap-1"
                   >
                     <UserPlus className="h-3.5 w-3.5" /> Quero ir! 🙋‍♂️
                   </Button>
@@ -411,7 +487,7 @@ const NearbyMap = ({ radius = 15 }) => {
           ))}
 
           {/* 2. Render Nearby User Markers */}
-          {mapUsersList.map((user) => (
+          {displayUsers.map((user) => (
             <Marker
               key={user.id}
               position={[user.lat, user.lng]}
@@ -422,24 +498,24 @@ const NearbyMap = ({ radius = 15 }) => {
                   <img
                     src={user.profile_photo_url}
                     alt={user.name}
-                    className="w-16 h-16 rounded-full object-cover mx-auto mb-2 border-2 border-pink-400 shadow-md"
+                    className="w-16 h-16 rounded-full object-cover mx-auto mb-2 border-2 border-[#FF4FA3] shadow-md"
                   />
                   <h4 className="font-bold text-gray-900 text-sm">{user.name}, {user.age || 24}</h4>
-                  <p className="text-[11px] text-pink-600 font-bold mb-1 flex items-center justify-center gap-1">
+                  <p className="text-[11px] text-[#D414A8] font-bold mb-1 flex items-center justify-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {user.distance || 1.2} km de você
                   </p>
-                  <p className="text-xs text-gray-600 line-clamp-2 mb-3 leading-tight font-normal">
+                  <p className="text-xs text-slate-600 line-clamp-2 mb-3 leading-tight font-normal">
                     {user.bio || 'Adoro conversas sinceras e momentos espontâneos.'}
                   </p>
                   
                   <Button
                     onClick={() => navigate('/discover')}
                     size="sm"
-                    className="w-full h-8 text-xs bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white font-bold rounded-xl shadow-md hover:opacity-95"
+                    className="w-full h-8 text-xs bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white font-bold rounded-xl shadow-md hover:opacity-95"
                   >
                     <Heart className="h-3.5 w-3.5 mr-1" />
-                    Conectar no Discover
+                    Conectar
                   </Button>
                 </div>
               </Popup>
@@ -448,33 +524,6 @@ const NearbyMap = ({ radius = 15 }) => {
         </MapContainer>
       </div>
 
-      {/* Map Legend Footer */}
-      <div className="bg-white/95 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 border-t border-purple-100 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] sm:text-xs font-semibold text-gray-600">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-pink-500 border border-white shadow-sm" />
-            <span>Pessoas</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-purple-600 border border-white shadow-sm" />
-            <span>Eventos 🎉</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-pulse" />
-            <span>GPS Ativo</span>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => navigate('/discover')}
-          variant="ghost"
-          size="sm"
-          className="text-[11px] sm:text-xs text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1 px-2 h-7 sm:h-8"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Modo Discover</span>
-        </Button>
-      </div>
     </div>
   );
 };

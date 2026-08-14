@@ -215,46 +215,45 @@ const Discover = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 pb-28 text-foreground selection:bg-purple-500 selection:text-white">
-      <div className={`${viewMode === 'profiles' ? 'max-w-md' : 'max-w-6xl'} mx-auto space-y-3 pt-1 transition-all duration-300`}>
+    <div className="min-h-screen bg-[#070611] text-white p-3 sm:p-5 pb-28 selection:bg-[#FF4FA3] selection:text-white">
+      <div className={`${viewMode === 'profiles' ? 'max-w-md' : 'max-w-6xl'} mx-auto space-y-4 pt-1 transition-all duration-300`}>
 
-        
         {/* Minimalist Top Header & High-Contrast Filter Trigger */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#A020F0] to-[#FF4FA3] bg-clip-text text-transparent flex items-center gap-2">
               <span>Descoberta</span>
-              <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-400 font-extrabold border border-purple-500/30">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#9B20F0]/20 text-[#FF4FA3] font-black border border-[#9B20F0]/40">
                 VIP
               </span>
             </h1>
-            <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-1 mt-0.5">
-              <MapPin className="h-3 w-3 text-purple-400" />
-              Raio de busca: <span className="text-foreground font-black">{radius} km</span>
+            <p className="text-[11px] text-[#AAA5BA] font-bold flex items-center gap-1 mt-0.5">
+              <MapPin className="h-3 w-3 text-[#FF4FA3]" />
+              Raio de busca: <span className="text-white font-black">{radius} km</span>
             </p>
           </div>
 
           <Button
             onClick={() => setShowFilterModal(true)}
             variant="outline"
-            className="rounded-xl px-3.5 py-1.5 border-purple-500/30 bg-card hover:bg-accent text-foreground shadow-sm flex items-center gap-2 font-bold text-xs"
+            className="rounded-xl px-3.5 py-1.5 border-[#30204D] bg-[#0D0A1C] hover:border-[#9B20F0] text-white shadow-lg flex items-center gap-2 font-bold text-xs"
           >
-            <SlidersHorizontal className="h-4 w-4 text-purple-400" />
-            <span className="font-extrabold text-foreground">Filtros</span>
+            <SlidersHorizontal className="h-4 w-4 text-[#FF4FA3]" />
+            <span className="font-extrabold text-white">Filtros</span>
             {(genderFilter !== 'all' || radius !== 25 || socialStyleFilter !== 'all') && (
-              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[#F01E75] animate-pulse" />
             )}
           </Button>
         </div>
 
-        {/* Minimalist High-Contrast 3-Mode Selection Bar */}
-        <div className="flex bg-card p-1 rounded-2xl border border-border shadow-sm">
+        {/* Sleek Cards vs Grid View Selector */}
+        <div className="flex bg-[#0D0A1C] p-1 rounded-full border border-[#30204D] shadow-inner max-w-xs mx-auto">
           <button
             onClick={() => setViewMode('profiles')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-full text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
               viewMode === 'profiles'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#D414A8] text-white shadow-lg'
+                : 'text-[#AAA5BA] hover:text-white'
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
@@ -262,27 +261,15 @@ const Discover = () => {
           </button>
 
           <button
-            onClick={() => setViewMode('now')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-              viewMode === 'now'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            <Radio className="h-3.5 w-3.5 animate-pulse" />
-            <span>Conexões Agora ⚡</span>
-          </button>
-
-          <button
             onClick={() => setViewMode('grid')}
-            className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-full text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
               viewMode === 'grid'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#D414A8] text-white shadow-lg'
+                : 'text-[#AAA5BA] hover:text-white'
             }`}
-            title="Visualização em Grade"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
+            <span>Grade</span>
           </button>
         </div>
 

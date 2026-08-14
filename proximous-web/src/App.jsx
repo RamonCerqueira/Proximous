@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
 import Discover from './pages/Discover';
+import ModoAgora from './pages/ModoAgora';
 import MomentsFeed from './pages/MomentsFeed';
 import Matches from './pages/Matches';
 
@@ -81,6 +82,17 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <Layout>
               <Discover />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/now" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ModoAgora />
             </Layout>
           </ProtectedRoute>
         } 

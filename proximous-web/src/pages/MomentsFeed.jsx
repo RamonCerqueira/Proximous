@@ -10,18 +10,14 @@ import {
   Share2, 
   Plus, 
   MapPin, 
-  Sparkles, 
-  Image as ImageIcon,
   X,
   Send,
   Lock,
   CheckCircle2,
   RefreshCw,
   Camera,
-  Upload,
   Link as LinkIcon,
   Smile,
-  Globe,
   Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +26,22 @@ import { momentsAPI } from '../lib/api';
 import { EmojiStyle } from 'emoji-picker-react';
 
 const EmojiPicker = React.lazy(() => import('emoji-picker-react'));
+
+const formatMomentTime = (dateStr) => {
+  if (!dateStr) return 'Agora';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Recente';
+  
+  const now = new Date();
+  const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+  
+  if (diffInMinutes < 1) return 'Agora mesmo';
+  if (diffInMinutes < 60) return `Há ${diffInMinutes} min`;
+  if (diffInMinutes < 1440 && now.getDate() === date.getDate()) {
+    return `Hoje, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 const MomentsFeed = () => {
   const { user } = useAuth();
@@ -45,6 +57,9 @@ const MomentsFeed = () => {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
+  // Dynamic Geolocation City State
+  const [userDetectedCity, setUserDetectedCity] = useState(user?.city || user?.location_name || '');
+
   // Icebreaker Modal State
   const [selectedIcebreakerMoment, setSelectedIcebreakerMoment] = useState(null);
   const [icebreakerText, setIcebreakerText] = useState('');
@@ -52,26 +67,36 @@ const MomentsFeed = () => {
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const whatsappEmojis = [
-    '😊', '🥰', '😎', '✨', '💖', '☕', '🌿', '📚', '🌅', '🎧', '🎨', '🚴', '🍕', '🌟', '🔥', '💬',
-    '❤️', '💕', '💫', '🎉', '🍀', '🌸', '🌞', '🍷', '🏝️', '📸', '🧘‍♀️', '☕', '🍵', '🥐', '🎶', '✌️'
-  ];
-
   const presetPhotos = [
-    { label: '☕ Café', url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1080&h=1080&fit=crop' },
-    { label: '🌿 Natureza', url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1080&h=1080&fit=crop' },
-    { label: '📖 Leitura', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1080&h=1080&fit=crop' },
-    { label: '🏙️ Cidade', url: 'https://images.unsplash.com/photo-1477959858617-67f30ac4ce78?w=1080&h=1080&fit=crop' },
+    { label: '☕ Café', url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80' },
+    { label: '🌿 Natureza', url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80' },
+    { label: '📖 Leitura', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80' },
+    { label: '🏙️ Cidade', url: 'https://images.unsplash.com/photo-1477959858617-67f30ac4ce78?auto=format&fit=crop&w=800&q=80' },
   ];
 
-  const whatsappActivities = [
-    { label: '☕ Tomando café', text: '☕ Tomando um bom café...' },
-    { label: '📖 Lendo livro', text: '📖 Lendo um bom livro...' },
-    { label: '🌿 Na natureza', text: '🌿 Em meio à natureza...' },
-    { label: '🎧 Ouvindo música', text: '🎧 Ouvindo minha playlist...' }
-  ];
-
-
+  // Geolocation detection to preserve exact current city
+  useEffect(() => {
+    if (user?.city) {
+      setUserDetectedCity(user.city);
+    } else if (user?.location_name) {
+      setUserDetectedCity(user.location_name);
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const data = await res.json();
+            const city = data.address?.city || data.address?.town || data.address?.municipality || data.address?.state_district || 'Sua Região';
+            setUserDetectedCity(city);
+          } catch (e) {
+            console.warn('Could not resolve reverse geocoding city:', e);
+          }
+        },
+        (err) => console.warn('Geolocation permission not granted:', err)
+      );
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchMoments();
@@ -81,35 +106,42 @@ const MomentsFeed = () => {
     try {
       setLoading(true);
       const res = await momentsAPI.getMoments();
-      setMoments(res.data.moments || []);
+      const loaded = res.data.moments || [];
+      if (loaded.length === 0) {
+        throw new Error('No moments returned from API');
+      }
+      setMoments(loaded);
     } catch (err) {
       console.warn('Using fallback moments:', err);
+      const now = Date.now();
+      const myCity = userDetectedCity || user?.city || 'Sua Região';
+
       setMoments([
         {
           id: 'm1',
           user_name: 'Mariana Silva',
           user_age: 24,
-          user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400',
-          user_city: 'São Paulo',
+          user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
+          user_city: myCity,
           user_id: 'user1',
           content: 'Domingo perfeito lendo um bom livro num café calmo. Alguém indica novidades de ficção científica? ☕📚',
-          photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1080&h=1080&fit=crop',
+          photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
           likes_count: 24,
           liked_by_me: false,
-          created_at: '2026-08-12T14:00:00Z'
+          created_at: new Date(now - 15 * 60000).toISOString()
         },
         {
           id: 'm2',
           user_name: 'Lucas Santos',
           user_age: 27,
-          user_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-          user_city: 'São Paulo',
+          user_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+          user_city: myCity,
           user_id: 'user2',
           content: 'Trilha matinal no fim de semana para recarregar as energias. Lugares silenciosos são os melhores. 🌿⛰️',
-          photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1080&h=1080&fit=crop',
+          photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
           likes_count: 41,
           liked_by_me: true,
-          created_at: '2026-08-12T11:00:00Z'
+          created_at: new Date(now - 120 * 60000).toISOString()
         }
       ]);
     } finally {
@@ -167,18 +199,43 @@ const MomentsFeed = () => {
 
     setPublishing(true);
     try {
-      const finalPhoto = photoPreview || newPostPhoto || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1080&h=1080&fit=crop';
+      const finalPhoto = photoPreview || newPostPhoto || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80';
       const res = await momentsAPI.createMoment({
         content: newPostContent.trim(),
         photo_url: finalPhoto
       });
-      setMoments([res.data.moment, ...moments]);
+
+      const newMoment = {
+        ...res.data.moment,
+        user_city: res.data.moment?.user_city || userDetectedCity || user?.city || 'Sua Cidade',
+        created_at: res.data.moment?.created_at || new Date().toISOString()
+      };
+
+      setMoments([newMoment, ...moments]);
       setNewPostContent('');
       setNewPostPhoto('');
       setPhotoPreview('');
       setShowCreateModal(false);
     } catch (err) {
       console.error('Error creating moment:', err);
+      // Local fallback moment post
+      const localMoment = {
+        id: 'm_' + Date.now(),
+        user_name: user?.name || 'Você',
+        user_age: user?.age || 25,
+        user_avatar: user?.profile_photo_url,
+        user_city: userDetectedCity || user?.city || 'Sua Cidade',
+        content: newPostContent.trim(),
+        photo_url: photoPreview || newPostPhoto || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+        likes_count: 0,
+        liked_by_me: false,
+        created_at: new Date().toISOString()
+      };
+      setMoments([localMoment, ...moments]);
+      setNewPostContent('');
+      setNewPostPhoto('');
+      setPhotoPreview('');
+      setShowCreateModal(false);
     } finally {
       setPublishing(false);
     }
@@ -209,25 +266,26 @@ const MomentsFeed = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-[#070611] text-white pb-28">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black tracking-tight luxury-gradient-text">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-[#A020F0] to-[#FF4FA3] bg-clip-text text-transparent">
               Feed de Momentos
             </h1>
-            <p className="text-xs text-muted-foreground font-medium mt-1">
-              Compartilhe fotos e pensamentos sem a pressão de comentários públicos.
+            <p className="text-xs text-[#AAA5BA] font-medium mt-1 flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-purple-400" />
+              <span>{userDetectedCity || 'Sua Região'} • Compartilhe instantes locais</span>
             </p>
           </div>
 
           <Button
             onClick={() => setShowCreateModal(true)}
-            className="proximous-button-primary text-xs px-4 py-2.5 flex items-center gap-1.5"
+            className="bg-gradient-to-r from-[#9B20F0] to-[#D414A8] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-1.5"
           >
             <Plus className="h-4 w-4" />
-            <span>Criar Momento</span>
+            <span>Novo Momento</span>
           </Button>
         </div>
 
@@ -251,8 +309,12 @@ const MomentsFeed = () => {
                     className="flex items-center gap-3 cursor-pointer group"
                   >
                     <img
-                      src={moment.user_avatar || user?.profile_photo_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400'}
-                      alt={moment.user_name}
+                      src={moment.user_avatar || user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`}
+                      alt={moment.user_name || 'Autor'}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`;
+                      }}
                       className="w-11 h-11 rounded-full object-cover ring-2 ring-purple-500/30 group-hover:ring-purple-500 transition-all"
                     />
                     <div>
@@ -261,22 +323,26 @@ const MomentsFeed = () => {
                       </h3>
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-purple-400" />
-                        {moment.user_city || 'São Paulo'}
+                        {moment.user_city || userDetectedCity || 'Sua Região'}
                       </p>
                     </div>
                   </div>
 
-                  <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-bold">
-                    {moment.created_at ? new Date(moment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+                  <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-extrabold">
+                    {formatMomentTime(moment.created_at)}
                   </Badge>
                 </div>
 
                 {/* 1:1 Aspect Ratio Photo */}
                 {moment.photo_url && (
-                  <div className="w-full aspect-square bg-black/90 overflow-hidden relative">
+                  <div className="w-full aspect-square bg-slate-900 overflow-hidden relative flex items-center justify-center">
                     <img
                       src={moment.photo_url}
                       alt="Momento"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+                      }}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -419,8 +485,12 @@ const MomentsFeed = () => {
               {/* Author Profile Info Header */}
               <div className="flex items-center gap-3 mb-4">
                 <img
-                  src={user?.profile_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
+                  src={user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Voce')}&background=9B20F0&color=fff`}
                   alt={user?.name || 'Seu Perfil'}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Voce')}&background=9B20F0&color=fff`;
+                  }}
                   className="w-10 h-10 rounded-full object-cover border border-purple-500/30"
                 />
                 <div>
@@ -428,8 +498,8 @@ const MomentsFeed = () => {
                     {user?.name || 'Você'}
                   </h4>
                   <div className="flex items-center gap-1 text-[10px] text-purple-400 font-semibold bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20 w-fit mt-0.5">
-                    <Lock className="h-2.5 w-2.5" />
-                    <span>Sem comentários públicos</span>
+                    <MapPin className="h-2.5 w-2.5" />
+                    <span>{userDetectedCity || 'Sua Região'}</span>
                   </div>
                 </div>
               </div>
@@ -517,6 +587,10 @@ const MomentsFeed = () => {
                     <img 
                       src={photoPreview} 
                       alt="Prévia do Momento" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+                      }}
                       className="w-full h-full object-cover"
                     />
                     <button
@@ -615,10 +689,23 @@ const MomentsFeed = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* FLOATING ACTION BUTTON (+ POSTAR MOMENTO) ACCESSIBLE ANYWHERE WHILE SCROLLING */}
+        <motion.button
+          onClick={() => setShowCreateModal(true)}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_0_30px_rgba(214,20,168,0.6)] border-2 border-white/30 flex items-center gap-2 font-black text-xs tracking-tight transition-all duration-300"
+          title="Postar Novo Momento"
+        >
+          <Plus className="w-5 h-5 text-white" />
+          <span className="hidden sm:inline">Postar Momento</span>
+        </motion.button>
+
+      </div>
   );
 };
 
 export default MomentsFeed;
-
-

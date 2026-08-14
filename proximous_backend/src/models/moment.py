@@ -8,7 +8,7 @@ class Moment(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    photo_url = db.Column(db.String(255), nullable=True)
+    photo_url = db.Column(db.Text, nullable=True)
     likes_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

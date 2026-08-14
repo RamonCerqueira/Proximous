@@ -107,7 +107,10 @@ def sync_database_schema():
     """Ensure existing tables have all newly added columns dynamically"""
     try:
         inspector = inspect(db.engine)
-        if 'users' in inspector.get_table_names():
+        table_names = inspector.get_table_names()
+        
+        # 1. Users table
+        if 'users' in table_names:
             existing_columns = [c['name'] for c in inspector.get_columns('users')]
             
             queries = []
@@ -142,10 +145,41 @@ def sync_database_schema():
                 try:
                     db.session.execute(text(query))
                     db.session.commit()
-                    print(f"Schema Sync: Added column via '{query}'")
+                    print(f"Schema Sync (users): Added column via '{query}'")
                 except Exception as q_err:
                     db.session.rollback()
                     print(f"Schema Sync notice: {q_err}")
+
+        # 2. Activities table
+        if 'activities' in table_names:
+            act_cols = [c['name'] for c in inspector.get_columns('activities')]
+            if 'scheduled_time' not in act_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE activities ADD COLUMN scheduled_time VARCHAR(100)"))
+                    db.session.commit()
+                    print("Schema Sync (activities): Added scheduled_time column")
+                except Exception as q_err:
+                    db.session.rollback()
+
+        # 3. Activity_participants table
+        if 'activity_participants' in table_names:
+            part_cols = [c['name'] for c in inspector.get_columns('activity_participants')]
+            if 'status' not in part_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE activity_participants ADD COLUMN status VARCHAR(20) DEFAULT 'approved'"))
+                    db.session.commit()
+                    print("Schema Sync (activity_participants): Added status column")
+                except Exception as q_err:
+                    db.session.rollback()
+
+        # 4. Moments table
+        if 'moments' in table_names:
+            try:
+                db.session.execute(text("ALTER TABLE moments ALTER COLUMN photo_url TYPE TEXT"))
+                db.session.commit()
+            except Exception as q_err:
+                db.session.rollback()
+
     except Exception as e:
         print(f"Schema Sync error: {e}")
 
