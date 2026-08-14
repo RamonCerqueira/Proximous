@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proximous - Análise de Mercado</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+      
+      body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: linear-gradient(135deg, #FF8C00 0%, #FFA500 100%);
+        color: #FFFFFF;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .content {
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      
+      .logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .logo-text {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      
+      .circle-decoration {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .circle-1 {
+        width: 300px;
+        height: 300px;
+        bottom: -100px;
+        left: -100px;
+      }
+      
+      .circle-2 {
+        width: 200px;
+        height: 200px;
+        top: 100px;
+        right: -50px;
+      }
+      
+      .main-content {
+        display: flex;
+        flex: 1;
+        z-index: 1;
+        gap: 40px;
+      }
+      
+      .column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .chart-container {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      
+      .competitor-card {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        flex: 1;
+      }
+      
+      .competitor-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      
+      .competitor-icon {
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 20px;
+      }
+      
+      .feature-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .feature-list li {
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+      }
+      
+      .feature-list li i {
+        margin-right: 10px;
+        color: #FFFFFF;
+      }
+      
+      .trend-item {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+      }
+      
+      .trend-icon {
+        margin-right: 15px;
+        font-size: 24px;
+        width: 50px;
+        height: 50px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide-container">
+      <div class="content">
+        <div class="logo">
+          <span class="logo-text">P</span>
+        </div>
+        
+        <div class="circle-decoration circle-1"></div>
+        <div class="circle-decoration circle-2"></div>
+        
+        <h1 class="text-4xl font-bold mb-2">Análise de Mercado</h1>
+        <p class="text-xl mb-8 opacity-80">Pesquisa competitiva e tendências do setor</p>
+        
+        <div class="main-content">
+          <div class="column">
+            <div class="chart-container">
+              <h2 class="text-2xl font-medium mb-4">Comparativo de Mercado</h2>
+              <div style="height: 300px;">
+                <canvas id="marketChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="competitor-card">
+              <div class="competitor-header">
+                <div class="competitor-icon">
+                  <i class="fas fa-star"></i>
+                </div>
+                <h3 class="text-xl font-medium">Diferenciais do Proximous</h3>
+              </div>
+              <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> Foco em amizades genuínas, não em paquera</li>
+                <li><i class="fas fa-check-circle"></i> Sistema de matching baseado em interesses e localização</li>
+                <li><i class="fas fa-check-circle"></i> Gamificação para incentivar interações reais</li>
+                <li><i class="fas fa-check-circle"></i> Privacidade avançada com controle de localização</li>
+                <li><i class="fas fa-check-circle"></i> Disponível em web e mobile (iOS/Android)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="column">
+            <h2 class="text-2xl font-medium mb-4">Tendências de Mercado</h2>
+            
+            <div class="trend-item">
+              <div class="trend-icon">
+                <i class="fas fa-map-marker-alt"></i>
+              </div>
+              <div>
+                <h3 class="font-medium">Hiperlocal</h3>
+                <p class="text-sm opacity-80">Crescimento de 35% em aplicativos com foco em conexões locais nos últimos 2 anos</p>
+              </div>
+            </div>
+            
+            <div class="trend-item">
+              <div class="trend-icon">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <div>
+                <h3 class="font-medium">Privacidade</h3>
+                <p class="text-sm opacity-80">87% dos usuários consideram privacidade um fator decisivo na escolha de redes sociais</p>
+              </div>
+            </div>
+            
+            <div class="trend-item">
+              <div class="trend-icon">
+                <i class="fas fa-gamepad"></i>
+              </div>
+              <div>
+                <h3 class="font-medium">Gamificação</h3>
+                <p class="text-sm opacity-80">Aumento de 42% na retenção de usuários em apps com elementos de gamificação</p>
+              </div>
+            </div>
+            
+            <div class="trend-item">
+              <div class="trend-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <div>
+                <h3 class="font-medium">Comunidades</h3>
+                <p class="text-sm opacity-80">Crescimento de 28% na busca por aplicativos focados em construir comunidades reais</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Configuração do gráfico de mercado
+      const ctx = document.getElementById('marketChart').getContext('2d');
+      const marketChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Privacidade', 'Foco em Amizades', 'Gamificação', 'Facilidade de Uso', 'Monetização'],
+          datasets: [
+            {
+              label: 'Proximous',
+              data: [90, 95, 85, 80, 75],
+              backgroundColor: 'rgba(255, 140, 0, 0.2)',
+              borderColor: 'rgba(255, 140, 0, 1)',
+              borderWidth: 2,
+              pointBackgroundColor: '#FFFFFF',
+              pointRadius: 4
+            },
+            {
+              label: 'Competidores',
+              data: [60, 50, 70, 75, 85],
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: 'rgba(255, 255, 255, 0.6)',
+              borderWidth: 2,
+              pointBackgroundColor: '#FFFFFF',
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              angleLines: {
+                color: 'rgba(255, 255, 255, 0.2)'
+              },
+              grid: {
+                color: 'rgba(255, 255, 255, 0.2)'
+              },
+              pointLabels: {
+                color: '#FFFFFF',
+                font: {
+                  size: 14,
+                  family: 'Roboto'
+                }
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                backdropColor: 'transparent',
+                showLabelBackdrop: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#FFFFFF',
+                font: {
+                  family: 'Roboto'
+                }
+              }
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+

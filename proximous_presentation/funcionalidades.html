@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proximous - Funcionalidades Principais</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+      
+      body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: linear-gradient(135deg, #6A5ACD 0%, #87CEFA 100%);
+        color: #FFFFFF;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .content {
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      
+      .logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .logo-text {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      
+      .circle-decoration {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .circle-1 {
+        width: 300px;
+        height: 300px;
+        bottom: -100px;
+        left: -100px;
+      }
+      
+      .circle-2 {
+        width: 200px;
+        height: 200px;
+        top: 100px;
+        right: -50px;
+      }
+      
+      .main-content {
+        display: flex;
+        flex: 1;
+        z-index: 1;
+        gap: 40px;
+      }
+      
+      .column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .feature-section {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        flex: 1;
+      }
+      
+      .feature-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 15px;
+      }
+      
+      .feature-icon {
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      
+      .feature-content {
+        flex: 1;
+      }
+      
+      .mockup-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+      }
+      
+      .mockup-image {
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        max-width: 100%;
+        max-height: 450px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide-container">
+      <div class="content">
+        <div class="logo">
+          <span class="logo-text">P</span>
+        </div>
+        
+        <div class="circle-decoration circle-1"></div>
+        <div class="circle-decoration circle-2"></div>
+        
+        <h1 class="text-4xl font-bold mb-2">Funcionalidades Principais</h1>
+        <p class="text-xl mb-6 opacity-80">Recursos implementados no Proximous</p>
+        
+        <div class="main-content">
+          <div class="column">
+            <div class="feature-section">
+              <h2 class="text-2xl font-medium mb-4">Descoberta e Matching</h2>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Geolocalização Inteligente</h3>
+                  <p class="text-sm opacity-80">Encontre pessoas próximas com base na sua localização atual ou em áreas específicas</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-filter"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Filtros Avançados</h3>
+                  <p class="text-sm opacity-80">Filtre por interesses, idade, distância e estilo social para encontrar conexões relevantes</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-heart"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Sistema de Matching</h3>
+                  <p class="text-sm opacity-80">Algoritmo que conecta pessoas com interesses similares e compatibilidade social</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="feature-section">
+              <h2 class="text-2xl font-medium mb-4">Interação e Comunicação</h2>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-comments"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Chat em Tempo Real</h3>
+                  <p class="text-sm opacity-80">Mensagens instantâneas com suporte a texto, imagens e localização</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-ice-cream"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Quebra-gelos</h3>
+                  <p class="text-sm opacity-80">Sugestões de tópicos para iniciar conversas de forma natural e divertida</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Eventos Locais</h3>
+                  <p class="text-sm opacity-80">Descubra e participe de eventos próximos para conhecer pessoas pessoalmente</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="column">
+            <div class="feature-section">
+              <h2 class="text-2xl font-medium mb-4">Segurança e Privacidade</h2>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Verificação de Perfil</h3>
+                  <p class="text-sm opacity-80">Sistema de verificação para garantir autenticidade dos usuários</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-eye-slash"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Controle de Privacidade</h3>
+                  <p class="text-sm opacity-80">Defina quem pode ver seu perfil, localização e status de atividade</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-flag"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Moderação de Conteúdo</h3>
+                  <p class="text-sm opacity-80">Sistema de denúncias e moderação automática para manter a comunidade segura</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="feature-section">
+              <h2 class="text-2xl font-medium mb-4">Gamificação e Engajamento</h2>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-trophy"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Sistema de Conquistas</h3>
+                  <p class="text-sm opacity-80">Desbloqueie conquistas ao usar o app e interagir com outros usuários</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-star"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Níveis de Perfil</h3>
+                  <p class="text-sm opacity-80">Evolua seu perfil e desbloqueie recursos exclusivos com uso contínuo</p>
+                </div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <i class="fas fa-gift"></i>
+                </div>
+                <div class="feature-content">
+                  <h3 class="font-medium">Recompensas Diárias</h3>
+                  <p class="text-sm opacity-80">Receba benefícios por acessar o app regularmente e manter interações</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

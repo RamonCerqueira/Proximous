@@ -1,0 +1,33 @@
+# Configuração para DigitalOcean App Platform
+name: proximous-backend
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: your-username/proximous-backend
+    branch: main
+  run_command: python src/main.py
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 5000
+  health_check:
+    http_path: /api/health
+  envs:
+  - key: FLASK_ENV
+    value: production
+  - key: JWT_SECRET_KEY
+    value: your-super-secret-jwt-key-change-in-production
+    type: SECRET
+  - key: DATABASE_URL
+    value: ${db.DATABASE_URL}
+  - key: CORS_ORIGINS
+    value: https://your-frontend-domain.vercel.app
+
+databases:
+- name: db
+  engine: PG
+  version: "15"
+  size: basic-xs
+  num_nodes: 1
+

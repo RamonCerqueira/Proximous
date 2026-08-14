@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  proximous-backend:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///data/proximous.db
+      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
+      - CORS_ORIGINS=*
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Opcional: PostgreSQL para produção
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: proximous
+  #     POSTGRES_USER: proximous
+  #     POSTGRES_PASSWORD: your-secure-password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
+

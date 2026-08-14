@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proximous - Design UX/UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+      
+      body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: linear-gradient(135deg, #6A5ACD 0%, #87CEFA 100%);
+        color: #FFFFFF;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .content {
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      
+      .logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .logo-text {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      
+      .circle-decoration {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .circle-1 {
+        width: 300px;
+        height: 300px;
+        bottom: -100px;
+        left: -100px;
+      }
+      
+      .circle-2 {
+        width: 200px;
+        height: 200px;
+        top: 100px;
+        right: -50px;
+      }
+      
+      .main-content {
+        display: flex;
+        flex: 1;
+        z-index: 1;
+        gap: 40px;
+      }
+      
+      .column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .design-principles {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      
+      .principle-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      
+      .principle-icon {
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 20px;
+      }
+      
+      .color-palette {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+      }
+      
+      .color-item {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      
+      .color-name {
+        font-size: 12px;
+        margin-top: 5px;
+      }
+      
+      .mockup-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+      }
+      
+      .mockup-image {
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        max-width: 100%;
+        max-height: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide-container">
+      <div class="content">
+        <div class="logo">
+          <span class="logo-text">P</span>
+        </div>
+        
+        <div class="circle-decoration circle-1"></div>
+        <div class="circle-decoration circle-2"></div>
+        
+        <h1 class="text-4xl font-bold mb-2">Design UX/UI</h1>
+        <p class="text-xl mb-8 opacity-80">Experiência de usuário e interface visual</p>
+        
+        <div class="main-content">
+          <div class="column">
+            <div class="design-principles">
+              <h2 class="text-2xl font-medium mb-4">Princípios de Design</h2>
+              
+              <div class="principle-item">
+                <div class="principle-icon">
+                  <i class="fas fa-user-friends"></i>
+                </div>
+                <div>
+                  <h3 class="font-medium">Centrado no Usuário</h3>
+                  <p class="text-sm opacity-80">Experiência intuitiva e acessível para todos os perfis de usuários</p>
+                </div>
+              </div>
+              
+              <div class="principle-item">
+                <div class="principle-icon">
+                  <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div>
+                  <h3 class="font-medium">Mobile First</h3>
+                  <p class="text-sm opacity-80">Design otimizado para dispositivos móveis com responsividade completa</p>
+                </div>
+              </div>
+              
+              <div class="principle-item">
+                <div class="principle-icon">
+                  <i class="fas fa-universal-access"></i>
+                </div>
+                <div>
+                  <h3 class="font-medium">Acessibilidade</h3>
+                  <p class="text-sm opacity-80">Conformidade com WCAG 2.1 para garantir acesso universal</p>
+                </div>
+              </div>
+              
+              <div class="principle-item">
+                <div class="principle-icon">
+                  <i class="fas fa-palette"></i>
+                </div>
+                <div>
+                  <h3 class="font-medium">Identidade Visual</h3>
+                  <p class="text-sm opacity-80">Cores e elementos visuais que transmitem confiança e modernidade</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="design-principles">
+              <h2 class="text-2xl font-medium mb-4">Paleta de Cores</h2>
+              <p class="mb-4">Combinação de tons de lavanda e azul para transmitir confiança e proximidade</p>
+              
+              <div class="color-palette">
+                <div class="color-item" style="background-color: #6A5ACD;">
+                  <span class="color-name">Lavanda</span>
+                </div>
+                <div class="color-item" style="background-color: #87CEFA;">
+                  <span class="color-name">Azul Claro</span>
+                </div>
+                <div class="color-item" style="background-color: #FFFFFF; color: #333333;">
+                  <span class="color-name">Branco</span>
+                </div>
+                <div class="color-item" style="background-color: #333333;">
+                  <span class="color-name">Cinza</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="column">
+            <h2 class="text-2xl font-medium mb-4">Mockups de Alta Fidelidade</h2>
+            <div class="mockup-container">
+              <img src="/home/ubuntu/wireframe_onboarding.png" alt="Mockup do Proximous" class="mockup-image">
+            </div>
+            
+            <div class="mt-6">
+              <h3 class="text-xl font-medium mb-2">Principais Telas</h3>
+              <ul class="list-disc list-inside opacity-80">
+                <li>Onboarding e registro simplificado em 3 etapas</li>
+                <li>Descoberta de usuários com sistema de swipe intuitivo</li>
+                <li>Chat com interface limpa e recursos de mídia</li>
+                <li>Perfil personalizável com controles de privacidade</li>
+                <li>Dashboard com estatísticas e atividades recentes</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proximous - Arquitetura do Sistema</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+      
+      body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: linear-gradient(135deg, #6A5ACD 0%, #87CEFA 100%);
+        color: #FFFFFF;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .content {
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      
+      .logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .logo-text {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      
+      .circle-decoration {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .circle-1 {
+        width: 300px;
+        height: 300px;
+        bottom: -100px;
+        left: -100px;
+      }
+      
+      .circle-2 {
+        width: 200px;
+        height: 200px;
+        top: 100px;
+        right: -50px;
+      }
+      
+      .main-content {
+        display: flex;
+        flex: 1;
+        z-index: 1;
+        gap: 40px;
+      }
+      
+      .column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .architecture-diagram {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .tech-stack {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+      
+      .tech-category {
+        margin-bottom: 15px;
+      }
+      
+      .tech-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 5px;
+      }
+      
+      .tech-item {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+      }
+      
+      .tech-item i {
+        margin-right: 8px;
+      }
+      
+      .feature-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .feature-list li {
+        margin-bottom: 10px;
+        display: flex;
+        align-items: flex-start;
+      }
+      
+      .feature-list li i {
+        margin-right: 10px;
+        color: #87CEFA;
+        margin-top: 4px;
+      }
+      
+      #architecture-svg {
+        flex: 1;
+        min-height: 250px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide-container">
+      <div class="content">
+        <div class="logo">
+          <span class="logo-text">P</span>
+        </div>
+        
+        <div class="circle-decoration circle-1"></div>
+        <div class="circle-decoration circle-2"></div>
+        
+        <h1 class="text-4xl font-bold mb-2">Arquitetura do Sistema</h1>
+        <p class="text-xl mb-6 opacity-80">Estrutura técnica e componentes</p>
+        
+        <div class="main-content">
+          <div class="column">
+            <div class="architecture-diagram">
+              <h2 class="text-2xl font-medium mb-3">Diagrama de Arquitetura</h2>
+              <div id="architecture-svg"></div>
+            </div>
+            
+            <div class="tech-stack">
+              <h2 class="text-2xl font-medium mb-3">Stack Tecnológico</h2>
+              
+              <div class="tech-category">
+                <h3 class="font-medium">Backend</h3>
+                <div class="tech-items">
+                  <div class="tech-item"><i class="fab fa-python"></i>Flask</div>
+                  <div class="tech-item"><i class="fas fa-database"></i>PostgreSQL</div>
+                  <div class="tech-item"><i class="fas fa-key"></i>JWT</div>
+                </div>
+              </div>
+              
+              <div class="tech-category">
+                <h3 class="font-medium">Frontend</h3>
+                <div class="tech-items">
+                  <div class="tech-item"><i class="fab fa-react"></i>React</div>
+                  <div class="tech-item"><i class="fab fa-css3"></i>Tailwind</div>
+                  <div class="tech-item"><i class="fab fa-react"></i>React Native</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="column">
+            <div class="architecture-diagram">
+              <h2 class="text-2xl font-medium mb-3">Características Técnicas</h2>
+              
+              <ul class="feature-list">
+                <li>
+                  <i class="fas fa-shield-alt"></i>
+                  <div>
+                    <h3 class="font-medium">Segurança Avançada</h3>
+                    <p class="text-sm opacity-80">Autenticação JWT, criptografia de dados sensíveis e proteção contra CSRF/XSS</p>
+                  </div>
+                </li>
+                
+                <li>
+                  <i class="fas fa-tachometer-alt"></i>
+                  <div>
+                    <h3 class="font-medium">Alta Performance</h3>
+                    <p class="text-sm opacity-80">Otimização de consultas, cache Redis e lazy loading de imagens</p>
+                  </div>
+                </li>
+                
+                <li>
+                  <i class="fas fa-expand-arrows-alt"></i>
+                  <div>
+                    <h3 class="font-medium">Escalabilidade</h3>
+                    <p class="text-sm opacity-80">Arquitetura modular e design preparado para escala horizontal</p>
+                  </div>
+                </li>
+                
+                <li>
+                  <i class="fas fa-database"></i>
+                  <div>
+                    <h3 class="font-medium">Banco de Dados</h3>
+                    <p class="text-sm opacity-80">Modelo relacional otimizado com índices para consultas geoespaciais</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Criando o diagrama de arquitetura com D3.js
+      const width = document.getElementById('architecture-svg').clientWidth;
+      const height = 250;
+      
+      const svg = d3.select('#architecture-svg')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height);
+      
+      // Definindo os componentes da arquitetura
+      const components = [
+        { id: 'client', name: 'Clientes', x: width * 0.15, y: height * 0.2, width: 120, height: 60, type: 'client' },
+        { id: 'frontend', name: 'Frontend', x: width * 0.15, y: height * 0.5, width: 120, height: 60, type: 'frontend' },
+        { id: 'api', name: 'API Gateway', x: width * 0.4, y: height * 0.35, width: 120, height: 60, type: 'api' },
+        { id: 'backend', name: 'Backend', x: width * 0.65, y: height * 0.35, width: 120, height: 60, type: 'backend' },
+        { id: 'database', name: 'Banco de Dados', x: width * 0.65, y: height * 0.65, width: 120, height: 60, type: 'database' },
+        { id: 'storage', name: 'Storage', x: width * 0.4, y: height * 0.65, width: 120, height: 60, type: 'storage' }
+      ];
+      
+      // Definindo as conexões entre componentes
+      const connections = [
+        { source: 'client', target: 'frontend' },
+        { source: 'frontend', target: 'api' },
+        { source: 'api', target: 'backend' },
+        { source: 'backend', target: 'database' },
+        { source: 'backend', target: 'storage' },
+        { source: 'api', target: 'storage' }
+      ];
+      
+      // Cores para os diferentes tipos de componentes
+      const colors = {
+        client: '#87CEFA',
+        frontend: '#6A5ACD',
+        api: '#9370DB',
+        backend: '#8A2BE2',
+        database: '#4169E1',
+        storage: '#1E90FF'
+      };
+      
+      // Desenhando as conexões
+      connections.forEach(conn => {
+        const source = components.find(c => c.id === conn.source);
+        const target = components.find(c => c.id === conn.target);
+        
+        svg.append('line')
+          .attr('x1', source.x + source.width / 2)
+          .attr('y1', source.y + source.height / 2)
+          .attr('x2', target.x + target.width / 2)
+          .attr('y2', target.y + target.height / 2)
+          .attr('stroke', 'rgba(255, 255, 255, 0.6)')
+          .attr('stroke-width', 2);
+      });
+      
+      // Desenhando os componentes
+      const nodes = svg.selectAll('g')
+        .data(components)
+        .enter()
+        .append('g');
+      
+      nodes.append('rect')
+        .attr('x', d => d.x)
+        .attr('y', d => d.y)
+        .attr('width', d => d.width)
+        .attr('height', d => d.height)
+        .attr('rx', 10)
+        .attr('ry', 10)
+        .attr('fill', d => colors[d.type])
+        .attr('opacity', 0.8);
+      
+      nodes.append('text')
+        .attr('x', d => d.x + d.width / 2)
+        .attr('y', d => d.y + d.height / 2)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('fill', 'white')
+        .attr('font-size', '14px')
+        .text(d => d.name);
+    </script>
+  </body>
+</html>
+
