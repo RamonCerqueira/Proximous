@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { momentsAPI } from '../lib/api';
 import { EmojiStyle } from 'emoji-picker-react';
+import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
 const EmojiPicker = React.lazy(() => import('emoji-picker-react'));
 
@@ -289,6 +290,9 @@ const MomentsFeed = () => {
           </Button>
         </div>
 
+        {/* 📢 SPONSORED AD SLOT IN FEED TOP BANNER */}
+        <SponsoredAdSlot slotId="moments_feed_top" type="banner" />
+
         {/* Loading State */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
@@ -297,93 +301,100 @@ const MomentsFeed = () => {
           </div>
         )}
 
-        {/* Moments Stream */}
+        {/* Moments Stream with Native Sponsored Ad Insertion */}
         {!loading && (
           <div className="space-y-6">
-            {moments.map((moment) => (
-              <Card key={moment.id} className="luxury-glass-card border border-border/80 rounded-3xl overflow-hidden shadow-xl">
-                {/* Moment Author Header */}
-                <div className="p-4 flex items-center justify-between border-b border-border/40">
-                  <div 
-                    onClick={() => navigate('/discover', { state: { targetUserId: moment.user_id } })}
-                    className="flex items-center gap-3 cursor-pointer group"
-                  >
-                    <img
-                      src={moment.user_avatar || user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`}
-                      alt={moment.user_name || 'Autor'}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`;
-                      }}
-                      className="w-11 h-11 rounded-full object-cover ring-2 ring-purple-500/30 group-hover:ring-purple-500 transition-all"
-                    />
-                    <div>
-                      <h3 className="font-extrabold text-foreground text-sm group-hover:text-purple-400 transition-colors">
-                        {moment.user_name}, {moment.user_age || 25}
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-purple-400" />
-                        {moment.user_city || userDetectedCity || 'Sua Região'}
-                      </p>
+            {moments.map((moment, index) => (
+              <React.Fragment key={moment.id}>
+                <Card className="luxury-glass-card border border-border/80 rounded-3xl overflow-hidden shadow-xl">
+                  {/* Moment Author Header */}
+                  <div className="p-4 flex items-center justify-between border-b border-border/40">
+                    <div 
+                      onClick={() => navigate('/discover', { state: { targetUserId: moment.user_id } })}
+                      className="flex items-center gap-3 cursor-pointer group"
+                    >
+                      <img
+                        src={moment.user_avatar || user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`}
+                        alt={moment.user_name || 'Autor'}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(moment.user_name || 'User')}&background=9B20F0&color=fff`;
+                        }}
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-purple-500/30 group-hover:ring-purple-500 transition-all"
+                      />
+                      <div>
+                        <h3 className="font-extrabold text-foreground text-sm group-hover:text-purple-400 transition-colors">
+                          {moment.user_name}, {moment.user_age || 25}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-purple-400" />
+                          {moment.user_city || userDetectedCity || 'Sua Região'}
+                        </p>
+                      </div>
                     </div>
+
+                    <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-extrabold">
+                      {formatMomentTime(moment.created_at)}
+                    </Badge>
                   </div>
 
-                  <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-extrabold">
-                    {formatMomentTime(moment.created_at)}
-                  </Badge>
-                </div>
+                  {/* 1:1 Aspect Ratio Photo */}
+                  {moment.photo_url && (
+                    <div className="w-full aspect-square bg-slate-900 overflow-hidden relative flex items-center justify-center">
+                      <img
+                        src={moment.photo_url}
+                        alt="Momento"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
 
-                {/* 1:1 Aspect Ratio Photo */}
-                {moment.photo_url && (
-                  <div className="w-full aspect-square bg-slate-900 overflow-hidden relative flex items-center justify-center">
-                    <img
-                      src={moment.photo_url}
-                      alt="Momento"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  {/* Moment Content Text */}
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-foreground text-xs sm:text-sm leading-relaxed font-normal">
+                      {moment.content}
+                    </p>
+
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/40">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <button
+                          onClick={() => handleToggleLike(moment.id)}
+                          className={`flex items-center gap-1.5 text-xs font-bold px-3 sm:px-3.5 py-1.5 rounded-xl transition-all ${
+                            moment.liked_by_me
+                              ? 'bg-pink-500/15 text-pink-400 border border-pink-500/30'
+                              : 'bg-card/70 text-muted-foreground hover:bg-pink-500/10 hover:text-pink-400 border border-border/40'
+                          }`}
+                        >
+                          <Heart className={`h-4 w-4 ${moment.liked_by_me ? 'fill-pink-500 text-pink-500' : ''}`} />
+                          <span>{moment.likes_count || 0}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenIcebreaker(moment)}
+                          className="flex items-center gap-1.5 text-xs font-extrabold bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 px-3 sm:px-4 py-1.5 rounded-xl shadow-sm transition-all"
+                        >
+                          <MessageCircle className="h-4 w-4 text-purple-400" />
+                          <span>Puxar Assunto 💬</span>
+                        </button>
+                      </div>
+
+                      <button className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg">
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 📢 NATIVE IN-FEED SPONSORED CARD SLOT (Inserted after every 1st moment) */}
+                {index === 0 && (
+                  <SponsoredAdSlot slotId="moments_feed_native" type="card" />
                 )}
-
-                {/* Moment Content Text */}
-                <CardContent className="p-4 space-y-3">
-                  <p className="text-foreground text-xs sm:text-sm leading-relaxed font-normal">
-                    {moment.content}
-                  </p>
-
-                  {/* Actions Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/40">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <button
-                        onClick={() => handleToggleLike(moment.id)}
-                        className={`flex items-center gap-1.5 text-xs font-bold px-3 sm:px-3.5 py-1.5 rounded-xl transition-all ${
-                          moment.liked_by_me
-                            ? 'bg-pink-500/15 text-pink-400 border border-pink-500/30'
-                            : 'bg-card/70 text-muted-foreground hover:bg-pink-500/10 hover:text-pink-400 border border-border/40'
-                        }`}
-                      >
-                        <Heart className={`h-4 w-4 ${moment.liked_by_me ? 'fill-pink-500 text-pink-500' : ''}`} />
-                        <span>{moment.likes_count || 0}</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenIcebreaker(moment)}
-                        className="flex items-center gap-1.5 text-xs font-extrabold bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 px-3 sm:px-4 py-1.5 rounded-xl shadow-sm transition-all"
-                      >
-                        <MessageCircle className="h-4 w-4 text-purple-400" />
-                        <span>Puxar Assunto 💬</span>
-                      </button>
-                    </div>
-
-                    <button className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg">
-                      <Share2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
+              </React.Fragment>
             ))}
           </div>
         )}
@@ -690,21 +701,21 @@ const MomentsFeed = () => {
         )}
       </AnimatePresence>
 
-      {/* FLOATING ACTION BUTTON (+ POSTAR MOMENTO) ACCESSIBLE ANYWHERE WHILE SCROLLING */}
-        <motion.button
-          onClick={() => setShowCreateModal(true)}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_0_30px_rgba(214,20,168,0.6)] border-2 border-white/30 flex items-center gap-2 font-black text-xs tracking-tight transition-all duration-300"
-          title="Postar Novo Momento"
-        >
-          <Plus className="w-5 h-5 text-white" />
-          <span className="hidden sm:inline">Postar Momento</span>
-        </motion.button>
+      {/* FLOATING ACTION BUTTON (+ POSTAR MOMENTO) */}
+      <motion.button
+        onClick={() => setShowCreateModal(true)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_0_30px_rgba(214,20,168,0.6)] border-2 border-white/30 flex items-center gap-2 font-black text-xs tracking-tight transition-all duration-300"
+        title="Postar Novo Momento"
+      >
+        <Plus className="w-5 h-5 text-white" />
+        <span className="hidden sm:inline">Postar Momento</span>
+      </motion.button>
 
-      </div>
+    </div>
   );
 };
 

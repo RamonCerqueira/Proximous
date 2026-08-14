@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { notificationsAPI } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
 const NotificationsPage = () => {
   const navigate = useNavigate();
@@ -59,95 +60,54 @@ const NotificationsPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/')}
-              className="w-10 h-10 rounded-2xl bg-card border border-border/80 hover:bg-accent text-foreground transition-all flex items-center justify-center flex-shrink-0 shadow-sm"
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-2xl font-black luxury-gradient-text">Notificações</h1>
-              <p className="text-xs text-muted-foreground font-medium">Acompanhe novos matches, curtidas e novidades</p>
-            </div>
+            <h1 className="text-xl font-extrabold text-foreground">Notificações</h1>
           </div>
 
-          <Button
+          <button
             onClick={handleMarkAllRead}
-            variant="outline"
-            className="rounded-2xl text-xs font-bold border-border/80 text-foreground hover:bg-accent flex items-center gap-1.5 px-4 py-2"
+            className="text-xs font-bold text-purple-400 hover:text-purple-300"
           >
-            <CheckCheck className="h-4 w-4 text-purple-400" />
-            <span className="hidden sm:inline">Marcar Lidas</span>
-          </Button>
+            Marcar todas como lidas
+          </button>
         </div>
 
-        {/* Category Pills */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-          {[
-            { id: 'all', label: 'Todas' },
-            { id: 'match', label: 'Matches 🔓' },
-            { id: 'like', label: 'Curtidas ❤️' },
-            { id: 'message', label: 'Mensagens 💬' },
-            { id: 'empathy', label: 'Empatia 💜' }
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setFilterType(cat.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${
-                filterType === cat.id
-                  ? 'proximous-button-primary text-white shadow-md'
-                  : 'luxury-glass text-muted-foreground hover:text-foreground border border-border/80'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+        {/* 📢 SPONSORED AD BANNER SLOT AT NOTIFICATIONS */}
+        <SponsoredAdSlot slotId="notifications_top" type="banner" />
 
-        {/* Main List */}
-        {loading ? (
-          <div className="p-12 text-center luxury-glass-card rounded-3xl border border-border/80">
-            <p className="text-xs font-bold text-muted-foreground">Carregando suas notificações...</p>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          <Card className="luxury-glass-card border border-border/80 p-8 text-center rounded-3xl space-y-3">
-            <CheckCircle2 className="h-12 w-12 text-purple-400 mx-auto opacity-50" />
-            <h3 className="font-black text-base text-foreground">Nenhuma notificação nesta categoria</h3>
-            <p className="text-xs text-muted-foreground">Sua caixa de notificações está em dia!</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredNotifications.map((notif) => (
-              <motion.div
+        {/* Notifications list */}
+        <div className="space-y-3">
+          {filteredNotifications.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground space-y-2">
+              <Bell className="h-8 w-8 mx-auto text-purple-400" />
+              <p className="font-extrabold text-foreground text-sm">Nenhuma notificação por enquanto</p>
+              <p className="text-xs">Fique atento, novidades aparecerão aqui!</p>
+            </div>
+          ) : (
+            filteredNotifications.map((notif) => (
+              <div
                 key={notif.id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
+                className={`p-4 rounded-2xl border transition-all ${
+                  notif.is_read ? 'bg-card/40 border-border/40' : 'bg-purple-500/10 border-purple-500/30'
+                }`}
               >
-                <Card className={`luxury-glass-card border transition-all rounded-3xl overflow-hidden ${
-                  !notif.is_read ? 'border-purple-500/40 shadow-md bg-purple-500/5' : 'border-border/80'
-                }`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg">
-                      {notif.type === 'match' ? <Heart className="h-6 w-6 fill-white" /> :
-                       notif.type === 'like' ? <Sparkles className="h-6 w-6" /> :
-                       notif.type === 'message' ? <MessageCircle className="h-6 w-6" /> :
-                       notif.type === 'empathy' ? <Award className="h-6 w-6" /> : <Coffee className="h-6 w-6" />}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-black text-sm text-foreground truncate">{notif.title}</h4>
-                        <span className="text-[10px] font-bold text-muted-foreground">{notif.created_at}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
-                        {notif.message}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        )}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground">{notif.title || 'Notificação Proximous'}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

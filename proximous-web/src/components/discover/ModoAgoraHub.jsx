@@ -24,6 +24,7 @@ import {
 import { activitiesAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import SponsoredAdSlot from '@/components/SponsoredAdSlot';
 
 const QUICK_PRESETS = [
   { id: 'coffee', label: 'Café & Conversa ☕', text: 'Tomar um café agora' },
@@ -195,13 +196,11 @@ const ModoAgoraHub = ({
           
           {/* Radar Sonar Animation Display */}
           <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
-            {/* Concentric rings */}
             <div className="absolute inset-0 rounded-full border border-purple-500/20 animate-[ping_3s_linear_infinite] opacity-30" />
             <div className="absolute inset-3 rounded-full border border-emerald-500/20 animate-[ping_4s_linear_infinite] opacity-20" />
             <div className="absolute inset-8 rounded-full border border-purple-500/40" />
             <div className="absolute inset-16 rounded-full border border-emerald-400/40" />
             
-            {/* Rotating radar beam scanner sweep */}
             <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
               <div className="w-full h-full bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(53,227,138,0.3)_360deg)] animate-[spin_4s_linear_infinite] origin-center rounded-full" />
             </div>
@@ -300,6 +299,9 @@ const ModoAgoraHub = ({
 
       </div>
 
+      {/* 📢 SPONSORED AD BANNER SLOT AT RADAR HUB */}
+      <SponsoredAdSlot slotId="radar_mid" type="banner" />
+
       {/* 💡 FLUXO DE SEGURANÇA E APROVAÇÃO (EXPLICATIVO) */}
       <div className="bg-white/5 border border-purple-500/20 rounded-3xl p-4 sm:p-5 backdrop-blur-xl space-y-3">
         <div className="flex items-center gap-2 text-xs font-black uppercase text-purple-300">
@@ -373,7 +375,6 @@ const ModoAgoraHub = ({
                   </button>
                 </div>
 
-                {/* Lista de Candidaturas com Botão Aceitar/Recusar */}
                 <div className="pt-3 border-t border-white/10 space-y-2">
                   <p className="text-xs font-extrabold text-white flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
@@ -477,12 +478,10 @@ const ModoAgoraHub = ({
                 whileHover={{ scale: 1.03, y: -2 }}
                 className="group relative rounded-3xl bg-gradient-to-b from-[#18122B]/80 to-[#0F0C1B]/90 border border-white/10 hover:border-emerald-500/50 p-4 flex flex-col items-center text-center transition-all shadow-lg hover:shadow-[0_0_25px_rgba(53,227,138,0.25)]"
               >
-                {/* Distance Badge */}
                 <span className="absolute top-3 right-3 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-black text-[9px] px-2 py-0.5 rounded-full">
                   {person.distance_range || '500 m'}
                 </span>
 
-                {/* Avatar with Live Green Ring */}
                 <div className="relative my-2">
                   <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-emerald-500 to-teal-300 ring-4 ring-emerald-500/20 group-hover:scale-105 transition-transform overflow-hidden">
                     <img
@@ -498,7 +497,6 @@ const ModoAgoraHub = ({
                   <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#070611] shadow-[0_0_8px_#35E38A]" />
                 </div>
 
-                {/* User Info */}
                 <h4 className="font-extrabold text-sm text-white truncate max-w-[120px] group-hover:text-emerald-400 transition-colors">
                   {person.name ? person.name.split(' ')[0] : 'Usuário'}, {person.age || 25}
                 </h4>
@@ -507,7 +505,6 @@ const ModoAgoraHub = ({
                   "{person.current_status_text || 'Disponível agora'}"
                 </p>
 
-                {/* Action Button */}
                 <button 
                   onClick={() => handleConnectUser(person.id)}
                   className="mt-3 w-full bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 font-black text-xs py-1.5 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95"
@@ -519,7 +516,6 @@ const ModoAgoraHub = ({
             ))}
           </div>
         ) : (
-          /* Empty Radar State Visual */
           <div className="relative rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 text-center space-y-4 overflow-hidden">
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(53,227,138,0.2)]">
               <Radio className="h-8 w-8 animate-pulse text-emerald-400" />
