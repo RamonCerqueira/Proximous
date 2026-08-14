@@ -1,66 +1,48 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { matchingAPI, usersAPI } from '../lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { 
-  Heart, 
-  MessageCircle, 
-  Star, 
-  Zap, 
-  Gift, 
-  MapPin, 
-  Sparkles, 
-  Lock, 
-  Unlock, 
-  X, 
-  Search, 
-  SlidersHorizontal, 
-  Compass, 
-  Clock, 
-  ShieldCheck,
-  CheckCircle2,
-  RefreshCw,
-  Eye,
-  ChevronDown,
-  ArrowRight,
-  Send,
-  Mail,
-  Filter
-} from 'lucide-react';
-import { 
-  getUserInitials, 
-  generateAvatarUrl, 
-  formatDistance
-} from '../lib/auth';
-import SponsoredAdSlot from '../components/SponsoredAdSlot';
+import { matchingAPI } from '../lib/api';
+import { Sparkles, ChevronDown, Mail, Send, Filter } from 'lucide-react';
+import UserProfileModal from '@/components/UserProfileModal';
+import SponsoredAdSlot from '@/components/SponsoredAdSlot';
+
+// Modular Match Components
+import MatchesHeader from '@/components/matches/MatchesHeader';
+import MatchesTabs from '@/components/matches/MatchesTabs';
+import MatchCard from '@/components/matches/MatchCard';
+import ReceivedRequestCard from '@/components/matches/ReceivedRequestCard';
+import SentRequestCard from '@/components/matches/SentRequestCard';
+import EmptyMatchState from '@/components/matches/EmptyMatchState';
+import NearbyPeopleBanner from '@/components/matches/NearbyPeopleBanner';
+import PrivacyCard from '@/components/matches/PrivacyCard';
+
+const SORT_OPTIONS = [
+  'Mais recentes',
+  'Mais próximos',
+  'Maior compatibilidade',
+  'Online agora'
+];
 
 const Matches = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Single State Managing Page Tab: 'matches' | 'received' | 'sent'
+  const [activeTab, setActiveTab] = useState('matches');
+
+  // Data State
   const [matches, setMatches] = useState([]);
   const [sentLikes, setSentLikes] = useState([]);
   const [receivedLikes, setReceivedLikes] = useState([]);
-  const [discoverUsers, setDiscoverUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('matches');
 
-  // Search, Filter & Sort State
+  // Search & Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [radiusFilter, setRadiusFilter] = useState(25);
   const [sortBy, setSortBy] = useState('Mais recentes');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-
-  // Selected profile modal preview
-  const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+  const [selectedUserModal, setSelectedUserModal] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -69,19 +51,18 @@ const Matches = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [matchesRes, sentRes, receivedRes, discoverRes] = await Promise.all([
+      const [matchesRes, sentRes, receivedRes] = await Promise.all([
         matchingAPI.getMatches().catch(() => ({ data: { matches: [] } })),
         matchingAPI.getSentLikes().catch(() => ({ data: { likes: [] } })),
         matchingAPI.getReceivedLikes().catch(() => ({ data: { likes: [] } })),
-        usersAPI.discover({ radius: 25 }).catch(() => ({ data: { users: [] } })),
       ]);
 
       const fetchedMatches = matchesRes.data.matches || [];
       const fetchedSent = sentRes.data.likes || [];
       const fetchedReceived = receivedRes.data.likes || [];
-      const fetchedDiscover = discoverRes.data.users || [];
 
-      if (fetchedMatches.length === 0 && fetchedReceived.length === 0) {
+      if (fetchedMatches.length === 0 && fetchedReceived.length === 0 && fetchedSent.length === 0) {
+        // Mock fallback profiles strictly aligned with JSON specification & 3-screen reference
         setMatches([
           {
             id: 'm_mock_1',
@@ -89,19 +70,17 @@ const Matches = () => {
             user2_id: user?.id,
             other_user: {
               id: 'user_other_1',
-              name: 'Camila Rocha',
-              age: 26,
-              profile_photo_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+              name: 'Ana',
+              age: 28,
+              profile_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
               city: 'São Paulo',
-              bio: 'Apaixonada por fotografia, café especial e viagens espontâneas ☕📸',
-              distance: 3.2,
+              distance: 1.8,
               compatibility_score: 94,
               is_online: true,
-              social_style: 'Extrovertida',
-              personality_tags: ['Fotografia', 'Café', 'Samba']
+              personality_tags: ['🎵 Música', '✈️ Viagens', '☕ Gastronomia']
             },
             created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-            last_message_text: 'Adorei a indicação daquele livro! Vamos tomar um café?'
+            last_message_text: 'Adorei conversar com você! Vamos agendar aquele café?'
           },
           {
             id: 'm_mock_2',
@@ -109,19 +88,35 @@ const Matches = () => {
             user2_id: user?.id,
             other_user: {
               id: 'user_other_2',
-              name: 'Gabriel Costa',
-              age: 29,
-              profile_photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+              name: 'Julia',
+              age: 31,
+              profile_photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
               city: 'São Paulo',
-              bio: 'Desenvolvedor, fã de corrida no Ibirapuera e noites de jogos de tabuleiro 🏃‍♂️🎲',
-              distance: 5.8,
-              compatibility_score: 89,
-              is_online: false,
-              social_style: 'Ambivertido',
-              personality_tags: ['Tecnologia', 'Trilha', 'Boardgames']
+              distance: 2.4,
+              compatibility_score: 87,
+              is_online: true,
+              personality_tags: ['🏋️ Fitness', '📚 Leitura', '🌿 Natureza']
             },
             created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-            last_message_text: 'Partiu corrida no parque esse fim de semana?'
+            last_message_text: 'Partiu trilha no parque esse fim de semana?'
+          },
+          {
+            id: 'm_mock_3',
+            user1_id: 'user_other_3',
+            user2_id: user?.id,
+            other_user: {
+              id: 'user_other_3',
+              name: 'Marina',
+              age: 27,
+              profile_photo_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+              city: 'São Paulo',
+              distance: 3.1,
+              compatibility_score: 84,
+              is_online: true,
+              personality_tags: ['📸 Fotografia', '🍕 Comida', '🎬 Cinema']
+            },
+            created_at: new Date(Date.now() - 3600000 * 48).toISOString(),
+            last_message_text: 'Oi! Vi que você também gosta de cinema...'
           }
         ]);
 
@@ -130,15 +125,64 @@ const Matches = () => {
             id: 'like_rec_1',
             sender: {
               id: 'user_rec_1',
-              name: 'Beatriz Lima',
-              age: 24,
-              profile_photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+              name: 'Beatriz',
+              age: 26,
+              profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=600&q=80',
               city: 'São Paulo',
-              bio: 'Arquiteta, apaixonada por arte urbana e vinhos 🍷',
-              compatibility_score: 91
+              distance: 1.6,
+              compatibility_score: 91,
+              common_interests_count: 3,
+              interest_icons: ['✈️', '🎵', '🍷'],
+              personality_tags: ['Arte', 'Vinhos', 'Design']
             },
-            like_type: 'superlike',
-            created_at: new Date(Date.now() - 1800000).toISOString()
+            received_time: 'há 2h',
+            is_new: true
+          },
+          {
+            id: 'like_rec_2',
+            sender: {
+              id: 'user_rec_2',
+              name: 'Larissa',
+              age: 30,
+              profile_photo_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
+              city: 'São Paulo',
+              distance: 2.9,
+              compatibility_score: 88,
+              common_interests_count: 2,
+              interest_icons: ['🧘‍♀️', '☕'],
+              personality_tags: ['Yoga', 'Café', 'Teatro']
+            },
+            received_time: 'há 5h',
+            is_new: true
+          }
+        ]);
+
+        setSentLikes([
+          {
+            id: 'like_sent_1',
+            receiver: {
+              id: 'user_sent_1',
+              name: 'Camila',
+              age: 29,
+              profile_photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80',
+              city: 'São Paulo',
+              distance: 2.2,
+            },
+            sent_time: 'há 3 horas',
+            status: 'Aguardando resposta'
+          },
+          {
+            id: 'like_sent_2',
+            receiver: {
+              id: 'user_sent_2',
+              name: 'Juliana',
+              age: 27,
+              profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+              city: 'São Paulo',
+              distance: 3.7,
+            },
+            sent_time: 'há 1 dia',
+            status: 'Aguardando resposta'
           }
         ]);
       } else {
@@ -146,8 +190,6 @@ const Matches = () => {
         setSentLikes(fetchedSent);
         setReceivedLikes(fetchedReceived);
       }
-
-      setDiscoverUsers(fetchedDiscover);
     } catch (err) {
       console.error('Error fetching matches data:', err);
     } finally {
@@ -191,7 +233,6 @@ const Matches = () => {
     try {
       await matchingAPI.unmatch(matchId);
       setMatches(prev => prev.filter(match => match.id !== matchId));
-      if (selectedProfileUser) setSelectedProfileUser(null);
     } catch (error) {
       console.error('Error unmatching:', error);
     }
@@ -210,7 +251,7 @@ const Matches = () => {
   const handleCancelLike = async (receiverId) => {
     try {
       await matchingAPI.unlike(receiverId);
-      setSentLikes(prev => prev.filter(l => (l.receiver_id || l.receiver?.id) !== receiverId));
+      setSentLikes(prev => prev.filter(l => (l.receiver_id || l.receiver?.id || l.id) !== receiverId));
     } catch (error) {
       console.error('Error cancelling like:', error);
     }
@@ -218,185 +259,207 @@ const Matches = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070611] text-white p-6 space-y-6 max-w-6xl mx-auto flex flex-col items-center justify-center">
-        <RefreshCw className="h-8 w-8 text-purple-500 animate-spin" />
-        <p className="text-xs font-bold text-muted-foreground">Carregando suas conexões...</p>
+      <div className="min-h-screen bg-[#070611] text-white p-6 max-w-[1500px] mx-auto flex flex-col items-center justify-center space-y-4">
+        <div className="w-14 h-14 rounded-full border-4 border-[#9B20F0]/30 border-t-[#D414A8] animate-spin shadow-2xl" />
+        <p className="text-xs font-black text-[#AAA5BA] animate-pulse">Carregando suas conexões com segurança...</p>
       </div>
     );
   }
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
       className="min-h-screen bg-[#070611] text-white px-4 sm:px-6 md:px-8 py-6 pb-28 space-y-6 max-w-[1500px] mx-auto font-sans selection:bg-[#FF4FA3] selection:text-white"
     >
       
-      {/* 1. HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-[#A020F0] to-[#FF4FA3] bg-clip-text text-transparent">
-            Matches & Conexões
-          </h1>
-          <p className="text-xs sm:text-sm text-[#AAA5BA] font-medium mt-1">
-            Conexões reais começam com um interesse em comum.
-          </p>
-        </div>
+      {/* 1. Matches Header Component */}
+      <MatchesHeader
+        showSearch={showSearch}
+        setShowSearch={setShowSearch}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenFilters={() => navigate('/discover')}
+      />
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-2">
-          {showSearch ? (
-            <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 absolute left-3 text-[#AAA5BA]" />
-              <Input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar conexões..."
-                className="pl-8 pr-7 h-9 text-xs rounded-full bg-[#0D0A1C] border-[#30204D] text-white w-44 sm:w-60 focus:ring-[#9B20F0]"
-                autoFocus
-              />
-              <button 
-                onClick={() => { setSearchQuery(''); setShowSearch(false); }}
-                className="absolute right-2 text-[#AAA5BA] hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+      {/* 2. Matches Tabs Component */}
+      <MatchesTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        matchesCount={matches.length}
+        receivedCount={receivedLikes.length}
+        sentCount={sentLikes.length}
+      />
+
+      {/* 3. Single Page Active Tab View */}
+
+      {/* TAB 1: SEUS MATCHES */}
+      {activeTab === 'matches' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#FF4FA3]" />
+                <span>Seus Matches</span>
+              </h2>
+              <p className="text-xs text-[#AAA5BA] font-medium">Pessoas que curtiram você também.</p>
             </div>
+
+            {/* Sort Selector Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="bg-[#0D0A1C] border border-[#30204D] text-xs font-black text-[#AAA5BA] px-3.5 py-2 rounded-2xl flex items-center gap-2 hover:text-white transition-all shadow-sm"
+              >
+                <span>Ordenar</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <AnimatePresence>
+                {showSortDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="absolute right-0 mt-2 w-48 bg-[#0D0A1C] border border-[#30204D] rounded-2xl shadow-2xl py-2 z-30"
+                  >
+                    {SORT_OPTIONS.map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => { setSortBy(opt); setShowSortDropdown(false); }}
+                        className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${
+                          sortBy === opt ? 'bg-purple-600/30 text-purple-300' : 'text-[#AAA5BA] hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Matches Grid or Empty State */}
+          {displayMatchesList.length === 0 ? (
+            <EmptyMatchState tabKey="matches" />
           ) : (
-            <button
-              onClick={() => setShowSearch(true)}
-              className="p-2 rounded-xl bg-[#0D0A1C] border border-[#30204D] text-[#AAA5BA] hover:text-white hover:border-[#9B20F0] transition-all"
-              title="Buscar conexões"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {displayMatchesList.map((match, index) => (
+                <React.Fragment key={match.id}>
+                  <MatchCard
+                    match={match}
+                    onOpenProfile={(u) => setSelectedUserModal(u)}
+                    onOpenMessage={(id) => navigate('/messages', { state: { selectedUserId: id } })}
+                    onUnmatch={handleUnmatch}
+                  />
 
-      {/* Main Tabs Navigation */}
-      <Tabs defaultValue="matches" value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="bg-[#0D0A1C] border border-[#30204D] p-1 rounded-2xl inline-flex">
-          <TabsTrigger value="matches" className="rounded-xl text-xs font-black px-4 py-2">
-            Matches ({matches.length})
-          </TabsTrigger>
-          <TabsTrigger value="received" className="rounded-xl text-xs font-black px-4 py-2">
-            Quem Curtiu Você ({receivedLikes.length})
-          </TabsTrigger>
-          <TabsTrigger value="sent" className="rounded-xl text-xs font-black px-4 py-2">
-            Curtidas Enviadas ({sentLikes.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="matches" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {displayMatchesList.map((match, index) => {
-              const other = match.other_user || (match.user1_id === user?.id ? match.user2 : match.user1) || match.user;
-              if (!other) return null;
-
-              return (
-                <div key={match.id} className="contents">
-                  <div className="luxury-glass-card rounded-3xl p-4 border border-border/80 flex flex-col justify-between space-y-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={other.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(other.name || 'User')}&background=9B20F0&color=fff`}
-                        alt={other.name}
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(other.name || 'User')}&background=9B20F0&color=fff`;
-                        }}
-                        className="w-14 h-14 rounded-2xl object-cover ring-2 ring-purple-500/30"
-                      />
-                      <div>
-                        <h3 className="font-extrabold text-white text-base">{other.name}, {other.age || 25}</h3>
-                        <p className="text-xs text-purple-300 font-semibold flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-purple-400" />
-                          {other.city || 'Sua Região'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {match.last_message_text && (
-                      <p className="text-xs text-muted-foreground line-clamp-1 italic bg-white/5 p-2 rounded-xl border border-white/10">
-                        "{match.last_message_text}"
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                      <button
-                        onClick={() => navigate('/messages', { state: { selectedUserId: other.id } })}
-                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        <span>Conversar 💬</span>
-                      </button>
-                      <button
-                        onClick={() => handleUnmatch(match.id)}
-                        className="p-2 text-muted-foreground hover:text-red-400 rounded-xl hover:bg-red-500/10 transition-all"
-                        title="Desfazer Match"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 📢 NATIVE SPONSORED AD INSERTION: A cada 6 cards exibe o banner */}
                   {(index + 1) % 6 === 0 && (
                     <div className="col-span-full my-2">
                       <SponsoredAdSlot slotId={`matches_grid_${index}`} type="banner" />
                     </div>
                   )}
-                </div>
-              );
-            })}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {/* Nearby Promotion Banner */}
+          <NearbyPeopleBanner type="nearby" />
+        </div>
+      )}
+
+      {/* TAB 2: RECEBIDOS */}
+      {activeTab === 'received' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-black text-white flex items-center gap-2">
+              <Mail className="w-4 h-4 text-[#FF4FA3]" />
+              <span>Pessoas interessadas em você</span>
+            </h2>
+            <p className="text-xs text-[#AAA5BA] font-medium">Elas curtiram seu perfil e querem te conhecer.</p>
           </div>
 
-          {/* 📢 BANNER PUBLICITÁRIO NO RODAPÉ DOS MATCHES */}
-          <div className="pt-4">
-            <SponsoredAdSlot slotId="matches_bottom" type="banner" />
-          </div>
-        </TabsContent>
+          {receivedLikes.length === 0 ? (
+            <EmptyMatchState tabKey="received" />
+          ) : (
+            <div className="space-y-4">
+              {receivedLikes.map((like, index) => (
+                <React.Fragment key={like.id || index}>
+                  <ReceivedRequestCard
+                    like={like}
+                    onOpenProfile={(u) => setSelectedUserModal(u)}
+                    onLikeBack={handleLikeBack}
+                    onIgnore={(id) => handleCancelLike(id)}
+                  />
 
-        <TabsContent value="received" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {receivedLikes.map((like, index) => (
-              <div key={like.id || index} className="contents">
-                <div className="luxury-glass-card rounded-3xl p-4 border border-border/80 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={like.sender?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(like.sender?.name || 'User')}&background=9B20F0&color=fff`}
-                      alt={like.sender?.name || 'Pessoa'}
-                      className="w-14 h-14 rounded-2xl object-cover ring-2 ring-purple-500/30"
-                    />
-                    <div>
-                      <h3 className="font-extrabold text-white text-base">{like.sender?.name || 'Pessoa Interessada'}, {like.sender?.age || 25}</h3>
-                      <p className="text-xs text-purple-300 font-semibold">{like.sender?.city || 'Sua Região'}</p>
+                  {(index + 1) % 6 === 0 && (
+                    <div className="my-2">
+                      <SponsoredAdSlot slotId={`received_grid_${index}`} type="banner" />
                     </div>
-                  </div>
-                  <button
-                    onClick={() => handleLikeBack(like.sender?.id || like.sender_id)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-extrabold text-xs py-2.5 rounded-xl shadow-md flex items-center justify-center gap-1.5"
-                  >
-                    <Heart className="h-4 w-4 fill-white" />
-                    <span>Curtir de Volta (Match!)</span>
-                  </button>
-                </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
 
-                {(index + 1) % 6 === 0 && (
-                  <div className="col-span-full my-2">
-                    <SponsoredAdSlot slotId={`received_grid_${index}`} type="banner" />
-                  </div>
-                )}
-              </div>
-            ))}
+          {/* Privacy Card Component */}
+          <PrivacyCard />
+        </div>
+      )}
+
+      {/* TAB 3: ENVIADOS */}
+      {activeTab === 'sent' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-black text-white flex items-center gap-2">
+              <Send className="w-4 h-4 text-[#FF4FA3]" />
+              <span>Solicitações enviadas</span>
+            </h2>
+            <p className="text-xs text-[#AAA5BA] font-medium">Você demonstrou interesse nelas.</p>
           </div>
 
-          <div className="pt-4">
-            <SponsoredAdSlot slotId="received_bottom" type="banner" />
-          </div>
-        </TabsContent>
-      </Tabs>
+          {sentLikes.length === 0 ? (
+            <EmptyMatchState tabKey="sent" />
+          ) : (
+            <div className="space-y-4">
+              {sentLikes.map((like, index) => (
+                <React.Fragment key={like.id || index}>
+                  <SentRequestCard
+                    like={like}
+                    onOpenProfile={(u) => setSelectedUserModal(u)}
+                    onCancelLike={handleCancelLike}
+                  />
+
+                  {(index + 1) % 6 === 0 && (
+                    <div className="my-2">
+                      <SponsoredAdSlot slotId={`sent_grid_${index}`} type="banner" />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {/* Explore Banner Component */}
+          <NearbyPeopleBanner type="explore" />
+        </div>
+      )}
+
+      {/* User Profile Detail Modal */}
+      {selectedUserModal && (
+        <UserProfileModal
+          user={selectedUserModal}
+          isOpen={!!selectedUserModal}
+          onClose={() => setSelectedUserModal(null)}
+          onLike={() => {
+            handleLikeBack(selectedUserModal.id);
+            setSelectedUserModal(null);
+          }}
+        />
+      )}
+
     </motion.div>
   );
 };
