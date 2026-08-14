@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 from sqlalchemy import or_, and_
 
-from src.models.user import db, User, Message, Match, Achievement, UserAchievement
+from src.models.user import db, User, Message, Match, Achievement, UserAchievement, record_empathy_points
 
 messages_bp = Blueprint('messages', __name__)
 
@@ -28,9 +28,7 @@ def check_and_award_achievement(user_id, achievement_name):
         )
         db.session.add(user_achievement)
         
-        user = User.query.get(user_id)
-        if user:
-            user.empathy_points += 10
+        record_empathy_points(user_id, 10, 'achievement', f"Conquistou '{achievement.name}'")
         
         db.session.commit()
         return achievement

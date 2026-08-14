@@ -215,7 +215,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <Help />
+              <Contact />
             </Layout>
           </ProtectedRoute>
         } 

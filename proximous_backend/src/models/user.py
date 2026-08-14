@@ -510,4 +510,50 @@ class Notification(db.Model):
         }
 
 
+class EmpathyTransaction(db.Model):
+    __tablename__ = 'empathy_transactions'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False, index=True)
+    points = db.Column(db.Integer, nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # 'moments', 'icebreaker', 'achievement', 'profile', 'interaction'
+    description = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'points': self.points,
+            'category': self.category,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+def record_empathy_points(user_id, points, category, description):
+    """
+    Helper function to award empathy points to a user and log the transaction.
+    """
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return None
+        
+        user.empathy_points = (user.empathy_points or 0) + points
+        
+        transaction = EmpathyTransaction(
+            user_id=user_id,
+            points=points,
+            category=category,
+            description=description
+        )
+        db.session.add(transaction)
+        return transaction
+    except Exception as e:
+        print(f"Error recording empathy points: {e}")
+        return None
+
+
+
 

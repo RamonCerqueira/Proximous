@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from src.models.user import db, User, Message, Match
+from src.models.user import db, User, Message, Match, record_empathy_points
 from src.models.moment import Moment, MomentLike
 
 moments_bp = Blueprint('moments', __name__)
@@ -55,7 +55,7 @@ def create_moment():
         )
         
         # Award empathy points for sharing a moment
-        user.empathy_points = (user.empathy_points or 0) + 15
+        record_empathy_points(current_user_id, 15, 'moments', 'Publicou um Momento no feed')
         
         db.session.add(moment)
         db.session.commit()
@@ -152,7 +152,7 @@ def send_moment_icebreaker(moment_id):
         db.session.add(message)
         
         # Award Empathy Points for initiating conversation
-        user.empathy_points = (user.empathy_points or 0) + 20
+        record_empathy_points(current_user_id, 20, 'icebreaker', 'Enviou um Icebreaker em um Momento')
         db.session.commit()
         
         return jsonify({

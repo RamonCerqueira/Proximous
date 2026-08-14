@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import math
 from sqlalchemy import or_, and_
 
-from src.models.user import db, User, Like, Match, Achievement, UserAchievement
+from src.models.user import db, User, Like, Match, Achievement, UserAchievement, EmpathyTransaction, record_empathy_points
 
 users_bp = Blueprint('users', __name__)
 
@@ -637,4 +637,38 @@ def update_privacy_settings():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to update privacy settings', 'details': str(e)}), 500
+
+
+@users_bp.route('/empathy-history', methods=['GET'])
+@jwt_required()
+def get_empathy_history():
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Calculate weekly points (last 7 days)
+        one_week_ago = datetime.utcnow() - timedelta(days=7)
+        weekly_txs = EmpathyTransaction.query.filter(
+            EmpathyTransaction.user_id == current_user_id,
+            EmpathyTransaction.created_at >= one_week_ago
+        ).all()
+        weekly_points = sum(tx.points for tx in weekly_txs)
+        
+        # Fetch all transactions ordered by date descending
+        all_txs = EmpathyTransaction.query.filter_by(
+            user_id=current_user_id
+        ).order_by(EmpathyTransaction.created_at.desc()).all()
+        
+        transactions_data = [tx.to_dict() for tx in all_txs]
+        
+        return jsonify({
+            'total_points': user.empathy_points or 0,
+            'weekly_points': weekly_points,
+            'transactions': transactions_data
+        }), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch empathy history', 'details': str(e)}), 500
+
 

@@ -185,6 +185,7 @@ def sync_database_schema():
 
 # Create database tables
 with app.app_context():
+    from src.models.user import User, EmpathyTransaction
     db.create_all()
     sync_database_schema()
     

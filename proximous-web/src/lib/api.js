@@ -65,6 +65,7 @@ export const usersAPI = {
   updatePrivacySettings: (data) => api.put('/users/privacy-settings', data),
   updateAvailability: (data) => api.put('/users/availability', data),
   deactivateAccount: (reason) => api.post('/users/deactivate', { reason }),
+  getEmpathyHistory: () => api.get('/users/empathy-history'),
 };
 
 // Activities API (Modo AGORA)

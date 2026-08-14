@@ -48,6 +48,9 @@ import {
   Info,
   Globe,
   SlidersHorizontal,
+  History,
+  TrendingUp,
+  Clock,
   ArrowLeft,
   Calendar,
   Radio,
@@ -103,6 +106,9 @@ const Profile = () => {
 
   // Modals & Popups State
   const [showEmpathyModal, setShowEmpathyModal] = useState(false);
+  const [empathyData, setEmpathyData] = useState({ total_points: 0, weekly_points: 0, transactions: [] });
+  const [loadingEmpathy, setLoadingEmpathy] = useState(false);
+  const [empathyModalTab, setEmpathyModalTab] = useState('transactions'); // 'transactions' | 'rules'
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -176,7 +182,22 @@ const Profile = () => {
 
   useEffect(() => {
     fetchProfileData();
+    fetchEmpathyHistory();
   }, []);
+
+  const fetchEmpathyHistory = async () => {
+    try {
+      setLoadingEmpathy(true);
+      const res = await usersAPI.getEmpathyHistory();
+      if (res.data) {
+        setEmpathyData(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching empathy history:', err);
+    } finally {
+      setLoadingEmpathy(false);
+    }
+  };
 
   const fetchProfileData = async () => {
     try {
@@ -314,12 +335,14 @@ const Profile = () => {
       return;
     }
 
-    const updated = [...formData.photos, newPhotoUrl.trim()];
+    const photoToAdd = newPhotoUrl.trim();
+    const updated = [...formData.photos, photoToAdd];
     setFormData(prev => ({ ...prev, photos: updated }));
+    setProfile(prev => prev ? { ...prev, photos: updated, profile_photo_url: updated[0] } : prev);
     setNewPhotoUrl('');
 
     try {
-      await usersAPI.addPhoto(newPhotoUrl.trim());
+      await usersAPI.addPhoto(photoToAdd);
     } catch (err) {
       console.warn('Sync add photo notice:', err);
     }
@@ -341,6 +364,7 @@ const Profile = () => {
       if (dataUrl) {
         const updated = [...formData.photos, dataUrl];
         setFormData(prev => ({ ...prev, photos: updated }));
+        setProfile(prev => prev ? { ...prev, photos: updated, profile_photo_url: updated[0] } : prev);
         setShowPhotoModal(false);
         usersAPI.addPhoto(dataUrl).catch(err => console.warn('Sync upload photo notice:', err));
       }
@@ -357,6 +381,7 @@ const Profile = () => {
 
     const updated = [...formData.photos, presetUrl];
     setFormData(prev => ({ ...prev, photos: updated }));
+    setProfile(prev => prev ? { ...prev, photos: updated, profile_photo_url: updated[0] } : prev);
     setShowPhotoModal(false);
     usersAPI.addPhoto(presetUrl).catch(err => console.warn('Sync preset photo notice:', err));
   };
@@ -369,19 +394,38 @@ const Profile = () => {
     }
 
     const updated = formData.photos.filter(p => p !== photoUrl);
+    const newPrimary = updated[0] || '';
     setFormData(prev => ({ ...prev, photos: updated }));
+    setProfile(prev => prev ? { ...prev, photos: updated, profile_photo_url: newPrimary } : prev);
 
     try {
       await usersAPI.deletePhoto(photoUrl);
+      await usersAPI.updateProfile({ photos: updated, profile_photo_url: newPrimary });
     } catch (err) {
       console.warn('Sync remove photo notice:', err);
     }
   };
 
-
-  const handleSetPrimaryPhoto = (photoUrl) => {
+  const handleSetPrimaryPhoto = async (photoUrl) => {
+    setPhotoError('');
     const filtered = formData.photos.filter(p => p !== photoUrl);
-    setFormData(prev => ({ ...prev, photos: [photoUrl, ...filtered] }));
+    const newPhotos = [photoUrl, ...filtered];
+
+    setFormData(prev => ({ ...prev, photos: newPhotos }));
+    setProfile(prev => prev ? { ...prev, photos: newPhotos, profile_photo_url: photoUrl } : prev);
+
+    try {
+      await usersAPI.updateProfile({
+        photos: newPhotos,
+        profile_photo_url: photoUrl
+      });
+      if (updateUser) {
+        updateUser({ ...user, profile_photo_url: photoUrl });
+      }
+    } catch (err) {
+      console.error('Error saving primary photo:', err);
+      setPhotoError('Erro ao salvar foto principal no servidor.');
+    }
   };
 
   // Interest Selection Helpers
@@ -660,7 +704,10 @@ const Profile = () => {
 
                   {/* EMPATHY POINTS GAMIFICATION CARD */}
                   <div 
-                    onClick={() => setShowEmpathyModal(true)}
+                    onClick={() => {
+                      setShowEmpathyModal(true);
+                      fetchEmpathyHistory();
+                    }}
                     className="cursor-pointer luxury-glass-card border border-purple-500/30 p-4 rounded-3xl flex items-center gap-4 hover:shadow-purple-500/10 transition-all group w-full md:w-auto"
                   >
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
@@ -670,11 +717,11 @@ const Profile = () => {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-[10px] font-black text-purple-400 uppercase tracking-wider">Pontos de Empatia</p>
                         <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1.5 py-0.5 rounded-full">
-                          +20 esta semana
+                          +{empathyData?.weekly_points ?? 0} esta semana
                         </Badge>
                       </div>
                       <p className="text-2xl font-black luxury-gradient-text">
-                        💜 {profile?.empathy_points || 340} pts
+                        💜 {empathyData?.total_points || profile?.empathy_points || 340} pts
                       </p>
                       <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 mt-0.5">
                         <Info className="h-3 w-3 text-purple-400" />
@@ -1524,7 +1571,7 @@ const Profile = () => {
     )}
 
 
-      {/* MODAL 1: COMO ESTOU PONTUANDO (PONTOS DE EMPATIA) */}
+      {/* MODAL 1: EXTRATO DE PONTOS DE EMPATIA */}
       <AnimatePresence>
         {showEmpathyModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -1532,7 +1579,7 @@ const Profile = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative"
+              className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative flex flex-col max-h-[85vh]"
             >
               <button
                 onClick={() => setShowEmpathyModal(false)}
@@ -1541,40 +1588,121 @@ const Profile = () => {
                 <X className="h-5 w-5" />
               </button>
 
+              {/* Modal Header */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white shadow-md">
                   <Award className="h-6 w-6" />
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Pontos de Empatia</h3>
-                  <p className="text-xs text-purple-600 font-bold">💜 {profile?.empathy_points || 340} pontos acumulados</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-purple-600 font-bold">
+                      💜 {empathyData?.total_points || profile?.empathy_points || 340} pontos acumulados
+                    </p>
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                      +{empathyData?.weekly_points ?? 0} 7 dias
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                Os Pontos de Empatia medem o quão autênticas e positivas são suas interações no Proximous.
-              </p>
-
-              <div className="space-y-2.5 text-xs">
-                {[
-                  { label: 'Interesses em comum', pts: '+120 pts', color: 'text-purple-600' },
-                  { label: 'Interações positivas', pts: '+80 pts', color: 'text-pink-600' },
-                  { label: 'Locais e encontros em comum', pts: '+60 pts', color: 'text-indigo-600' },
-                  { label: 'Comunidades ativas', pts: '+40 pts', color: 'text-emerald-600' },
-                  { label: 'Perfil 100% completo', pts: '+40 pts', color: 'text-amber-600' }
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{item.label}</span>
-                    <span className={`font-black ${item.color}`}>{item.pts}</span>
-                  </div>
-                ))}
+              {/* Navigation Tabs */}
+              <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl mb-4 text-xs font-bold">
+                <button
+                  onClick={() => setEmpathyModalTab('transactions')}
+                  className={`flex-1 py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    empathyModalTab === 'transactions'
+                      ? 'bg-white dark:bg-slate-900 text-purple-600 shadow-sm font-extrabold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Extrato de Pontos
+                </button>
+                <button
+                  onClick={() => setEmpathyModalTab('rules')}
+                  className={`flex-1 py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    empathyModalTab === 'rules'
+                      ? 'bg-white dark:bg-slate-900 text-purple-600 shadow-sm font-extrabold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  Como Pontuar
+                </button>
               </div>
+
+              {/* Tab 1: Extrato de Transações */}
+              {empathyModalTab === 'transactions' && (
+                <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 text-xs max-h-[320px]">
+                  {loadingEmpathy ? (
+                    <div className="py-8 text-center text-slate-400 font-medium">Carregando extrato...</div>
+                  ) : empathyData?.transactions && empathyData.transactions.length > 0 ? (
+                    empathyData.transactions.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="flex items-start justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800/50"
+                      >
+                        <div className="flex-1 pr-2">
+                          <p className="font-bold text-slate-800 dark:text-slate-200">{tx.description}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {tx.created_at ? new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+                          </p>
+                        </div>
+                        <span className="font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg text-xs whitespace-nowrap">
+                          +{tx.points} pts
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                        <div className="flex-1 pr-2">
+                          <p className="font-bold text-slate-800 dark:text-slate-200">Pontuação Inicial do Perfil</p>
+                          <p className="text-[10px] text-purple-400 mt-0.5">Bônus de Boas-vindas ao Proximous</p>
+                        </div>
+                        <span className="font-black text-purple-400 bg-purple-500/20 px-2 py-1 rounded-lg text-xs whitespace-nowrap">
+                          +{empathyData?.total_points || profile?.empathy_points || 340} pts
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-center text-slate-400 py-3 leading-relaxed">
+                        Publicações no feed, conversas ativas e conquistas geram novos registros neste extrato.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 2: Regras de Pontuação */}
+              {empathyModalTab === 'rules' && (
+                <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 text-xs max-h-[320px]">
+                  <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+                    Os Pontos de Empatia medem o quão autênticas e positivas são suas interações no Proximous.
+                  </p>
+                  {[
+                    { label: 'Publicar um Momento no feed', pts: '+15 pts', desc: 'Compartilhe ideias ou fotos no feed', color: 'text-purple-600' },
+                    { label: 'Enviar um Icebreaker em Momento', pts: '+20 pts', desc: 'Inicie uma conversa a partir de um post', color: 'text-pink-600' },
+                    { label: 'Desbloquear Conquistas', pts: '+10 pts', desc: 'Por interações e matches concluídos', color: 'text-indigo-600' },
+                    { label: 'Interesses & Conexões em comum', pts: '+120 pts', desc: 'Compatibilidade de perfil', color: 'text-emerald-600' },
+                    { label: 'Perfil 100% completo', pts: '+40 pts', desc: 'Adicione bio, fotos e tags de estilo', color: 'text-amber-600' }
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                      <div>
+                        <span className="font-bold text-slate-700 dark:text-slate-300 block">{item.label}</span>
+                        <span className="text-[10px] text-slate-400">{item.desc}</span>
+                      </div>
+                      <span className={`font-black ${item.color} whitespace-nowrap ml-2`}>{item.pts}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <Button
                 onClick={() => setShowEmpathyModal(false)}
-                className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-3"
+                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-3"
               >
-                Entendi
+                Fechar Extrato
               </Button>
             </motion.div>
           </div>
