@@ -215,8 +215,9 @@ const Discover = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 pb-24 text-foreground selection:bg-purple-500 selection:text-white">
-      <div className="max-w-md mx-auto space-y-3 pt-1">
+    <div className="min-h-screen bg-background p-3 sm:p-4 pb-28 text-foreground selection:bg-purple-500 selection:text-white">
+      <div className={`${viewMode === 'profiles' ? 'max-w-md' : 'max-w-6xl'} mx-auto space-y-3 pt-1 transition-all duration-300`}>
+
         
         {/* Minimalist Top Header & High-Contrast Filter Trigger */}
         <div className="flex items-center justify-between">

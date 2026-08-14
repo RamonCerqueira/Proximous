@@ -175,7 +175,7 @@ const Messages = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] bg-background max-w-7xl mx-auto border-x border-border/60">
+    <div className="flex h-[calc(100dvh-4rem)] sm:h-[calc(100vh-5rem)] bg-background max-w-7xl mx-auto border-x border-border/60">
       {/* Conversation List */}
       <div className={`w-full md:w-80 lg:w-96 bg-card border-r border-border/60 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-border/60 bg-card/60 backdrop-blur-md flex items-center justify-between">
@@ -185,7 +185,7 @@ const Messages = () => {
           </span>
         </div>
         
-        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-border/40">
+        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-border/40 pb-20 md:pb-0">
           {conversations.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground space-y-3">
               <div className="w-16 h-16 rounded-3xl bg-purple-500/10 flex items-center justify-center mx-auto text-purple-400">
@@ -262,11 +262,11 @@ const Messages = () => {
         {selectedConversation ? (
           <>
             {/* Chat Room Header */}
-            <div className="bg-card border-b border-border/60 p-4 flex items-center justify-between backdrop-blur-md">
+            <div className="bg-card border-b border-border/60 p-3 sm:p-4 flex items-center justify-between backdrop-blur-md">
               <div className="flex items-center space-x-3">
                 <button 
                   onClick={() => setSelectedConversation(null)} 
-                  className="md:hidden text-muted-foreground hover:text-foreground font-bold text-xs mr-1"
+                  className="md:hidden text-muted-foreground hover:text-foreground font-bold text-xs mr-1 bg-accent/60 px-2.5 py-1.5 rounded-xl border border-border"
                 >
                   ← Voltar
                 </button>
@@ -274,7 +274,7 @@ const Messages = () => {
                   <img
                     src={selectedConversation.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
                     alt={selectedConversation.name}
-                    className="w-11 h-11 rounded-2xl object-cover ring-2 ring-purple-500/30"
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover ring-2 ring-purple-500/30"
                   />
                   {selectedConversation.online && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background"></div>
@@ -296,7 +296,7 @@ const Messages = () => {
             </div>
 
             {/* Chat Messages Stream */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-background">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 custom-scrollbar bg-background">
               {messages.map((message) => {
                 const isMe = message.sender_id === user?.id;
                 return (
@@ -305,14 +305,14 @@ const Messages = () => {
                     className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
+                      className={`max-w-[85%] sm:max-w-xs md:max-w-md px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-sm ${
                         isMe
                           ? 'bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white rounded-br-xs shadow-purple-500/10'
                           : 'bg-card text-foreground border border-border/80 rounded-bl-xs'
 
                       }`}
                     >
-                      <p className="text-sm leading-relaxed font-normal">{message.content}</p>
+                      <p className="text-xs sm:text-sm leading-relaxed font-normal">{message.content}</p>
                       <p className={`text-[10px] mt-1 text-right font-medium ${
                         isMe ? 'text-white/80' : 'text-muted-foreground'
                       }`}>
@@ -339,23 +339,23 @@ const Messages = () => {
             </div>
 
             {/* Message Input Toolbar */}
-            <div className="bg-card border-t border-border/60 p-4">
+            <div className="bg-card border-t border-border/60 p-3 sm:p-4 pb-20 md:pb-4">
               <form onSubmit={sendMessage} className="flex space-x-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={handleInputChange}
-                  placeholder="Digite sua mensagem em tempo real..."
-                  className="flex-1 bg-background border border-border/80 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-foreground placeholder:text-muted-foreground transition-all"
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 bg-background border border-border/80 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-foreground placeholder:text-muted-foreground transition-all"
                   disabled={sending}
                 />
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || sending}
-                  className="proximous-button-primary rounded-2xl px-6 py-3 font-extrabold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="proximous-button-primary rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 font-extrabold text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                 >
                   {sending ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
                     <span>Enviar 🚀</span>
                   )}

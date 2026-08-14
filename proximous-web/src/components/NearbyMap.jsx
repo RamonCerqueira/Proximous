@@ -263,51 +263,54 @@ const NearbyMap = ({ radius = 15 }) => {
     <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl border border-purple-100 bg-white">
       
       {/* Map Header & Controls */}
-      <div className="absolute top-4 left-4 right-4 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-[400] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pointer-events-none">
         {/* Live GPS & Item Count Indicator */}
-        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-purple-100 flex items-center gap-2 pointer-events-auto">
-          {gpsStatus === 'active' ? (
-            <>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <div>
-                <span className="text-xs font-bold text-gray-800 block">Pessoas & Eventos Próximos</span>
-                <span className="text-[10px] text-gray-500 font-medium">Sinal GPS ({lastUpdated})</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 text-purple-600 animate-spin" />
-              <span className="text-xs font-bold text-purple-700">Obtendo Posição...</span>
-            </>
-          )}
+        <div className="bg-white/95 backdrop-blur-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-lg border border-purple-100 flex items-center justify-between sm:justify-start gap-2 pointer-events-auto">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {gpsStatus === 'active' ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-800 block truncate">Pessoas & Eventos</span>
+                  <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium block truncate">GPS ({lastUpdated || 'Ativo'})</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 text-purple-600 animate-spin flex-shrink-0" />
+                <span className="text-xs font-bold text-purple-700 truncate">Obtendo Posição...</span>
+              </>
+            )}
+          </div>
 
-          <div className="flex gap-1 ml-2">
-            <Badge className="bg-purple-100 text-purple-700 text-[10px] font-black">
-              👥 {mapUsersList.length} Pessoas
+          <div className="flex gap-1 flex-shrink-0">
+            <Badge className="bg-purple-100 text-purple-700 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5">
+              👥 {mapUsersList.length}
             </Badge>
-            <Badge className="bg-pink-100 text-pink-700 text-[10px] font-black">
-              🎉 {realEvents.length} Eventos
+            <Badge className="bg-pink-100 text-pink-700 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5">
+              🎉 {realEvents.length}
             </Badge>
           </div>
         </div>
 
         {/* Action Controls & Radius Selector */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 pointer-events-auto">
           <Button
             onClick={requestLiveLocation}
             size="sm"
-            className="h-9 rounded-2xl bg-white/90 backdrop-blur-md text-purple-700 border border-purple-200 hover:bg-purple-50 shadow-md text-xs font-bold flex items-center gap-1.5"
+            className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-white/90 backdrop-blur-md text-purple-700 border border-purple-200 hover:bg-purple-50 shadow-md text-[11px] sm:text-xs font-bold flex items-center gap-1 flex-shrink-0"
           >
-            <Crosshair className="h-4 w-4 text-pink-500" />
-            Minha Posição
+            <Crosshair className="h-3.5 w-3.5 text-pink-500" />
+            <span className="hidden xs:inline">Minha Posição</span>
+            <span className="xs:hidden">GPS</span>
           </Button>
 
-          <div className="bg-white/95 backdrop-blur-md p-1 rounded-2xl shadow-lg border border-purple-100 flex items-center gap-1">
+          <div className="bg-white/95 backdrop-blur-md p-1 rounded-2xl shadow-lg border border-purple-100 flex items-center gap-0.5 sm:gap-1">
             {[5, 15, 30, 50].map((r) => (
               <button
                 key={r}
                 onClick={() => setSelectedRadius(r)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                   selectedRadius === r
                     ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -321,7 +324,7 @@ const NearbyMap = ({ radius = 15 }) => {
       </div>
 
       {/* Leaflet Map Component */}
-      <div className="h-[460px] w-full z-10">
+      <div className="h-[340px] sm:h-[460px] md:h-[540px] w-full z-10">
         <MapContainer
           center={myLocation}
           zoom={14}
@@ -446,18 +449,18 @@ const NearbyMap = ({ radius = 15 }) => {
       </div>
 
       {/* Map Legend Footer */}
-      <div className="bg-white/95 backdrop-blur-md px-6 py-3 border-t border-purple-100 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-4 text-xs font-semibold text-gray-600">
+      <div className="bg-white/95 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 border-t border-purple-100 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] sm:text-xs font-semibold text-gray-600">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-pink-500 border border-white shadow-sm" />
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-pink-500 border border-white shadow-sm" />
             <span>Pessoas</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-purple-600 border border-white shadow-sm" />
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-purple-600 border border-white shadow-sm" />
             <span>Eventos 🎉</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-pulse" />
             <span>GPS Ativo</span>
           </div>
         </div>
@@ -466,10 +469,10 @@ const NearbyMap = ({ radius = 15 }) => {
           onClick={() => navigate('/discover')}
           variant="ghost"
           size="sm"
-          className="text-xs text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1"
+          className="text-[11px] sm:text-xs text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1 px-2 h-7 sm:h-8"
         >
           <Sparkles className="h-3.5 w-3.5" />
-          Abrir Modo Discover
+          <span>Modo Discover</span>
         </Button>
       </div>
     </div>

@@ -250,12 +250,12 @@ const Layout = ({ children }) => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 md:pb-8">
+      <main className="flex-1 pb-28 md:pb-8">
         {children}
       </main>
 
       {/* Mobile Floating Bottom Dock */}
-      <div className="md:hidden fixed bottom-3 left-4 right-4 z-50">
+      <div className="md:hidden fixed bottom-3 left-3 right-3 sm:left-6 sm:right-6 z-50 max-w-md mx-auto">
         <div className="luxury-glass-card rounded-3xl p-1.5 shadow-2xl border border-purple-500/20 backdrop-blur-2xl">
           <nav className="flex items-center justify-around">
             {navigationItems.map((item) => {
@@ -265,14 +265,14 @@ const Layout = ({ children }) => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all duration-200 ${
+                  className={`flex flex-col items-center justify-center py-1.5 px-2.5 sm:px-3 rounded-2xl transition-all duration-200 ${
                     active
                       ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25 scale-105'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-extrabold mt-1">{item.label}</span>
+                  <span className="text-[10px] font-extrabold mt-0.5">{item.label}</span>
                 </Link>
               );
             })}

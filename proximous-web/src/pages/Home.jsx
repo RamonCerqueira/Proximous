@@ -86,15 +86,15 @@ const Home = () => {
       className="relative group"
     >
       <Card className="luxury-glass-card border border-border/60 hover:border-purple-500/50 rounded-3xl overflow-hidden transition-all duration-300">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
+        <CardContent className="p-3.5 sm:p-5">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-muted-foreground truncate">{title}</p>
-              <p className="text-2xl sm:text-3xl font-black tracking-tight text-foreground mt-0.5">{value}</p>
-              {subtitle && <p className="text-[11px] text-muted-foreground/80 font-medium truncate mt-0.5">{subtitle}</p>}
+              <p className="text-[11px] sm:text-sm font-semibold text-muted-foreground truncate">{title}</p>
+              <p className="text-xl sm:text-3xl font-black tracking-tight text-foreground mt-0.5">{value}</p>
+              {subtitle && <p className="text-[10px] sm:text-[11px] text-muted-foreground/80 font-medium truncate mt-0.5">{subtitle}</p>}
             </div>
-            <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${gradient}`}>
-              <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${gradient}`}>
+              <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
             </div>
           </div>
         </CardContent>

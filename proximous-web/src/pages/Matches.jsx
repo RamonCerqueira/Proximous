@@ -157,17 +157,17 @@ const Matches = () => {
                 </div>
               )}
               
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2">
                 <Button 
                   onClick={() => { setSelectedMatchUser(otherUser); setModalPhotoIndex(0); }}
                   size="sm"
                   variant="outline"
-                  className="rounded-xl border-border/80 text-xs font-bold h-8 px-3 hover:bg-accent"
+                  className="rounded-xl border-border/80 text-xs font-bold h-8 px-2.5 sm:px-3 hover:bg-accent flex-1 sm:flex-none"
                 >
                   Ver Perfil 🔓
                 </Button>
 
-                <Button asChild size="sm" className="proximous-button-primary rounded-xl h-8 px-3 text-xs">
+                <Button asChild size="sm" className="proximous-button-primary rounded-xl h-8 px-2.5 sm:px-3 text-xs flex-1 sm:flex-none">
                   <Link to={`/messages/${otherUser.id}`}>
                     <MessageCircle className="w-3.5 h-3.5 mr-1" />
                     Conversar

@@ -289,11 +289,11 @@ const MomentsFeed = () => {
                   </p>
 
                   {/* Actions Row */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border/40">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/40">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <button
                         onClick={() => handleToggleLike(moment.id)}
-                        className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all ${
+                        className={`flex items-center gap-1.5 text-xs font-bold px-3 sm:px-3.5 py-1.5 rounded-xl transition-all ${
                           moment.liked_by_me
                             ? 'bg-pink-500/15 text-pink-400 border border-pink-500/30'
                             : 'bg-card/70 text-muted-foreground hover:bg-pink-500/10 hover:text-pink-400 border border-border/40'
@@ -305,7 +305,7 @@ const MomentsFeed = () => {
 
                       <button
                         onClick={() => handleOpenIcebreaker(moment)}
-                        className="flex items-center gap-1.5 text-xs font-extrabold bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 px-4 py-1.5 rounded-xl shadow-sm transition-all"
+                        className="flex items-center gap-1.5 text-xs font-extrabold bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 px-3 sm:px-4 py-1.5 rounded-xl shadow-sm transition-all"
                       >
                         <MessageCircle className="h-4 w-4 text-purple-400" />
                         <span>Puxar Assunto 💬</span>

@@ -8,8 +8,8 @@ import { Heart, MapPin, Sparkles } from 'lucide-react';
 const ProfileGrid = ({ users, loading, onSwipe, onResetFilters, onOpenFilterModal }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="h-64 rounded-3xl luxury-glass-card animate-pulse border border-border/40" />
         ))}
       </div>
@@ -41,7 +41,7 @@ const ProfileGrid = ({ users, loading, onSwipe, onResetFilters, onOpenFilterModa
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
       {users.map((u, idx) => {
         const photo = u.photos?.[0] || u.profile_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400';
         const matchPercent = u.empathy_score || (85 + (idx * 3) % 14);
