@@ -56,8 +56,8 @@ module.exports = {
     {
       name: 'proximous-backend',
       script: 'src/main.py',
-      interpreter: './venv/bin/python',
-      cwd: './proximous_backend',
+      interpreter: '/var/www/proximous/proximous_backend/venv/bin/python3',
+      cwd: '/var/www/proximous/proximous_backend',
       env: {
         NODE_ENV: 'production',
         PORT: 8700,
@@ -73,7 +73,7 @@ module.exports = {
       name: 'proximous-web',
       script: 'npx',
       args: 'serve -s dist -l 8701',
-      cwd: './proximous-web',
+      cwd: '/var/www/proximous/proximous-web',
       env: {
         NODE_ENV: 'production',
         PORT: 8701
