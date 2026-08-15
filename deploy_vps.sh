@@ -165,8 +165,8 @@ cd ..
 # ---------------------------------------------------------
 echo "🎨 Compilando o Frontend Web (Porta 8701)..."
 cd proximous-web
-npm install --legacy-peer-deps || pnpm install
-npm rebuild esbuild || true
+rm -rf node_modules
+npm install --legacy-peer-deps
 chmod -R +x node_modules/.bin || true
 npm run build
 cd ..
