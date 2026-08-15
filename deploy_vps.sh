@@ -175,7 +175,8 @@ cd ..
 # 5. Inicializar / Recarregar Aplicações no PM2
 # ---------------------------------------------------------
 echo "🔄 Recarregando serviços no PM2..."
-pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+pm2 delete proximous-backend proximous-web 2>/dev/null || true
+pm2 start ecosystem.config.js
 pm2 save
 
 # ---------------------------------------------------------
