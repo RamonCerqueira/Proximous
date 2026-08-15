@@ -18,8 +18,8 @@ module.exports = {
     },
     {
       name: 'proximous-web',
-      script: 'npx',
-      args: 'serve -s dist -l 8701',
+      script: 'node_modules/serve/build/main.js',
+      args: '-s dist -l 8701',
       cwd: '/var/www/proximous/proximous-web',
       env: {
         NODE_ENV: 'production',

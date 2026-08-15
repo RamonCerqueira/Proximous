@@ -71,8 +71,8 @@ module.exports = {
     },
     {
       name: 'proximous-web',
-      script: 'npx',
-      args: 'serve -s dist -l 8701',
+      script: 'node_modules/serve/build/main.js',
+      args: '-s dist -l 8701',
       cwd: '/var/www/proximous/proximous-web',
       env: {
         NODE_ENV: 'production',
@@ -93,11 +93,11 @@ cat << 'EOF' > nginx_proximous.conf
 
 server {
     listen 80;
-    server_name proximous.genioplay.com.br 153.75.244.238;
+    server_name proximous.genioplay.com.br 153.75.244.238 _;
 
     client_max_body_size 25M;
 
-    # Frontend Web App (Proxy para PM2 na porta 8701)
+    # Frontend Web App (Proxy para PM2 / Serve na porta 8701)
     location / {
         proxy_pass http://127.0.0.1:8701;
         proxy_http_version 1.1;
@@ -110,7 +110,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Backend API (Proxy para PM2 na porta 8700)
+    # Backend API Flask (Proxy para PM2 Flask na porta 8700)
     location /api/ {
         proxy_pass http://127.0.0.1:8700/api/;
         proxy_http_version 1.1;
@@ -123,7 +123,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # WebSockets / Socket.io
+    # WebSockets / Socket.io para Realtime Messaging
     location /socket.io/ {
         proxy_pass http://127.0.0.1:8700/socket.io/;
         proxy_http_version 1.1;
@@ -183,6 +183,7 @@ pm2 save
 # 6. Atualizar e Recarregar Nginx
 # ---------------------------------------------------------
 echo "🌐 Atualizando bloco de servidor do Nginx..."
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo cp nginx_proximous.conf /etc/nginx/sites-available/proximous.conf
 sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
