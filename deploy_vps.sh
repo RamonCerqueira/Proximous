@@ -149,13 +149,14 @@ fi
 # ---------------------------------------------------------
 echo "🐍 Configurando venv e dependências do Backend (Porta 8700)..."
 cd proximous_backend
-if [ ! -d "venv" ]; then
+if [ ! -f "venv/bin/pip" ]; then
+    rm -rf venv
     python3 -m venv venv
 fi
 source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install gunicorn gevent eventlet
+./venv/bin/python3 -m pip install --upgrade pip || true
+./venv/bin/python3 -m pip install -r requirements.txt
+./venv/bin/python3 -m pip install gunicorn gevent eventlet
 cd ..
 
 # ---------------------------------------------------------
