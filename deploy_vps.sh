@@ -134,34 +134,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
-
-server {
-    listen 8701;
-    server_name _;
-    client_max_body_size 25M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8701;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-
-server {
-    listen 8700;
-    server_name _;
-    client_max_body_size 25M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8700;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
 EOF
 
 # ---------------------------------------------------------
