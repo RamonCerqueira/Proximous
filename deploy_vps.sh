@@ -185,7 +185,8 @@ pm2 save
 echo "🌐 Atualizando bloco de servidor do Nginx..."
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo cp nginx_proximous.conf /etc/nginx/sites-available/proximous.conf
-sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/00-proximous.conf
+sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/proximous.conf
 sudo nginx -t && sudo systemctl reload nginx
 
 echo ""
