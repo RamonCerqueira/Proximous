@@ -149,10 +149,11 @@ fi
 # ---------------------------------------------------------
 echo "🐍 Configurando venv e dependências do Backend (Porta 8700)..."
 cd proximous_backend
-if [ ! -d "venv" ]; then
+if [ ! -f "venv/bin/python3" ] || [ ! -x "venv/bin/python3" ]; then
+    rm -rf venv
     python3 -m venv venv
-    chmod -R 755 venv
 fi
+chmod -R 755 venv 2>/dev/null || true
 ln -sf python3 venv/bin/python 2>/dev/null || true
 ./venv/bin/python3 -m pip install --upgrade pip --break-system-packages || true
 ./venv/bin/python3 -m pip install -r requirements.txt --break-system-packages || ./venv/bin/python3 -m pip install -r requirements.txt
