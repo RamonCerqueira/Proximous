@@ -154,6 +154,7 @@ if [ ! -f "venv/bin/python3" ] || [ ! -f "venv/bin/pip" ]; then
     python3 -m venv venv
     chmod -R 755 venv
 fi
+ln -sf python3 venv/bin/python
 source venv/bin/activate
 python3 -m pip install --upgrade pip || true
 python3 -m pip install -r requirements.txt

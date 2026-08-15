@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'proximous-backend',
       script: 'src/main.py',
-      interpreter: './venv/bin/python',
+      interpreter: './venv/bin/python3',
       cwd: './proximous_backend',
       env: {
         NODE_ENV: 'production',
