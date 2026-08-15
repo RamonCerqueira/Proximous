@@ -23,7 +23,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { momentsAPI } from '../lib/api';
-import { EmojiStyle } from 'emoji-picker-react';
 import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
 const EmojiPicker = React.lazy(() => import('emoji-picker-react'));
@@ -577,7 +576,7 @@ const MomentsFeed = () => {
                               onEmojiClick={(emojiData) => setNewPostContent(prev => prev + emojiData.emoji)}
                               autoFocusSearch={false}
                               theme="auto"
-                              emojiStyle={EmojiStyle.APPLE}
+                              emojiStyle="apple"
                               searchPlaceHolder="Buscar emoji..."
                               width="100%"
                               height={320}
