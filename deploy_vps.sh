@@ -44,7 +44,7 @@ EOF
 
 # Frontend Web .env.production
 cat << 'EOF' > proximous-web/.env.production
-VITE_API_URL=https://proximous.genioplay.com.br/api
+VITE_API_URL=/api
 VITE_APP_NAME=Proximous
 VITE_APP_VERSION=1.0.0
 EOF
@@ -58,6 +58,7 @@ module.exports = {
       script: 'src/main.py',
       interpreter: '/var/www/proximous/proximous_backend/venv/bin/python3',
       cwd: '/var/www/proximous/proximous_backend',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 8700,
@@ -74,6 +75,7 @@ module.exports = {
       script: 'node_modules/serve/build/main.js',
       args: '-s dist -l 8701',
       cwd: '/var/www/proximous/proximous-web',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 8701
@@ -93,7 +95,7 @@ cat << 'EOF' > nginx_proximous.conf
 
 server {
     listen 80;
-    server_name proximous.genioplay.com.br 153.75.244.238 _;
+    server_name proximous.genioplay.com.br 153.75.244.238;
 
     client_max_body_size 25M;
 
@@ -184,8 +186,8 @@ pm2 save
 # ---------------------------------------------------------
 echo "🌐 Atualizando bloco de servidor do Nginx..."
 sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-enabled/00-proximous.conf
 sudo cp nginx_proximous.conf /etc/nginx/sites-available/proximous.conf
-sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/00-proximous.conf
 sudo ln -sf /etc/nginx/sites-available/proximous.conf /etc/nginx/sites-enabled/proximous.conf
 sudo nginx -t && sudo systemctl reload nginx
 

@@ -5,6 +5,7 @@ module.exports = {
       script: 'src/main.py',
       interpreter: '/var/www/proximous/proximous_backend/venv/bin/python3',
       cwd: '/var/www/proximous/proximous_backend',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 8700,
@@ -21,6 +22,7 @@ module.exports = {
       script: 'node_modules/serve/build/main.js',
       args: '-s dist -l 8701',
       cwd: '/var/www/proximous/proximous-web',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 8701
