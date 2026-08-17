@@ -44,7 +44,7 @@ EOF
 
 # Frontend Web .env.production
 cat << 'EOF' > proximous-web/.env.production
-VITE_API_URL=http://proximous.genioplay.com.br/api
+VITE_API_URL=https://proximous.genioplay.com.br/api
 VITE_APP_NAME=Proximous
 VITE_APP_VERSION=1.0.0
 EOF
@@ -192,7 +192,7 @@ sudo nginx -t && sudo systemctl reload nginx
 echo ""
 echo "✨ DEPLOY CONCLUÍDO COM SUCESSO!"
 echo "--------------------------------------------------------"
-echo "🌐 Web App (Domínio): http://proximous.genioplay.com.br"
+echo "🌐 Web App (Domínio): https://proximous.genioplay.com.br"
 echo "🖥️ Web App (Porta 8701): http://153.75.244.238:8701"
 echo "⚙️ Backend API (Porta 8700): http://153.75.244.238:8700"
 echo "--------------------------------------------------------"
