@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Discover from './pages/Discover';
 import ModoAgora from './pages/ModoAgora';
+import ActivitiesExplorer from './pages/ActivitiesExplorer';
 import MomentsFeed from './pages/MomentsFeed';
 import Matches from './pages/Matches';
 
@@ -118,6 +119,17 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <Layout>
               <ModoAgora />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/activities" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ActivitiesExplorer />
             </Layout>
           </ProtectedRoute>
         } 

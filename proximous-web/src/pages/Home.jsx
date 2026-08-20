@@ -133,71 +133,11 @@ const Home = () => {
     }
   };
 
-  // High quality fallback profiles for demo & immediate visual excellence
-  const defaultNearbyUsers = [
-    {
-      id: 'demo-u1',
-      name: 'Mariana Silva',
-      age: 24,
-      distance: 1.2,
-      compatibility_score: 98,
-      bio: 'Adoro música, café calmo e conversas sobre livros de ficção.',
-      profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=600',
-      interests: ['Café', 'Música', 'Livros'],
-      is_online: true
-    },
-    {
-      id: 'demo-u2',
-      name: 'Lucas Santos',
-      age: 27,
-      distance: 1.8,
-      compatibility_score: 91,
-      bio: 'Trilha matinal no fim de semana e fotografia urbana.',
-      profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600',
-      interests: ['Trilha', 'Fotografia', 'Filmes'],
-      is_online: true
-    },
-    {
-      id: 'demo-u3',
-      name: 'Camila Rocha',
-      age: 23,
-      distance: 2.4,
-      compatibility_score: 88,
-      bio: 'Artista plástica e apaixonada por cafeterias acolhedoras.',
-      profile_photo_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=600',
-      interests: ['Arte', 'Design', 'Café'],
-      is_online: true
-    }
-  ];
-
-  const defaultActivities = [
-    {
-      id: 'act-1',
-      title: 'Café calmo & conversa sobre livros',
-      category: 'coffee',
-      location_name: 'Pinheiros, São Paulo',
-      scheduled_time: 'Hoje às 17:30',
-      participant_count: 1,
-      max_participants: 2,
-      creator: { name: 'Mariana', profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200' }
-    },
-    {
-      id: 'act-2',
-      title: 'Caminhada & Fotografia no Parque',
-      category: 'sports',
-      location_name: 'Parque Ibirapuera',
-      scheduled_time: 'Amanhã às 09:00',
-      participant_count: 2,
-      max_participants: 4,
-      creator: { name: 'Lucas', profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' }
-    }
-  ];
-
-  const displayUsers = nearbyUsers.length > 0 ? nearbyUsers : defaultNearbyUsers;
-  const displayActivities = activities.length > 0 ? activities : defaultActivities;
+  const displayUsers = nearbyUsers;
+  const displayActivities = activities;
   
   // Single curated featured match of the day
-  const featuredUser = displayUsers[0];
+  const featuredUser = displayUsers[0] || null;
 
   const handleQuickLike = async (targetUser) => {
     try {

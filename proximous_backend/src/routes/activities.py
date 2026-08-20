@@ -442,11 +442,39 @@ def get_my_activities():
     try:
         current_user_id = get_jwt_identity()
         participations = ActivityParticipant.query.filter_by(user_id=current_user_id).all()
-        activity_ids = [p.activity_id for p in participations]
+        participated_act_ids = [p.activity_id for p in participations]
         
-        activities = Activity.query.filter(Activity.id.in_(activity_ids)).all()
+        # All activities created by the current user
+        created_acts = Activity.query.filter_by(user_id=current_user_id).order_by(Activity.created_at.desc()).all()
+        created_ids = [a.id for a in created_acts]
+        
+        all_ids = list(set(participated_act_ids + created_ids))
+        all_activities = Activity.query.filter(Activity.id.in_(all_ids)).order_by(Activity.created_at.desc()).all() if all_ids else []
+        
+        created_list = []
+        requested_list = []
+        pending_requests_to_me = 0
+        
+        for act in all_activities:
+            act_dict = act.to_dict()
+            if act.user_id == current_user_id:
+                # Count pending requests from other users
+                for p in act.participants:
+                    if p.user_id != current_user_id and getattr(p, 'status', 'pending') == 'pending':
+                        pending_requests_to_me += 1
+                created_list.append(act_dict)
+            else:
+                # Activity created by someone else that current user requested to join
+                my_part = next((p for p in act.participants if p.user_id == current_user_id), None)
+                act_dict['my_status'] = getattr(my_part, 'status', 'pending') if my_part else 'pending'
+                act_dict['my_joined_at'] = my_part.joined_at.isoformat() if my_part and my_part.joined_at else None
+                requested_list.append(act_dict)
+                
         return jsonify({
-            'activities': [a.to_dict() for a in activities if a.is_active()]
+            'created_activities': created_list,
+            'requested_activities': requested_list,
+            'pending_requests_count': pending_requests_to_me,
+            'activities': [a.to_dict() for a in all_activities if a.is_active()]
         }), 200
         
     except Exception as e:

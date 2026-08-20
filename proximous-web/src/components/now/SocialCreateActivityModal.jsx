@@ -22,7 +22,8 @@ import {
   Info,
   Search,
   CheckCircle2,
-  Heart
+  Heart,
+  Radio
 } from 'lucide-react';
 import { activitiesAPI } from '@/lib/api';
 

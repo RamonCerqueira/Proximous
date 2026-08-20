@@ -1,41 +1,55 @@
 import os
 import sys
-
-# DON'T CHANGE THIS: ensure src module can be imported
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from datetime import datetime, timedelta
 import json
+
+# Ensure src module can be imported
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from src.main import app
 from src.models.user import db, User, Like, Match, Message, Achievement, UserAchievement
+from src.models.activity import Activity, ActivityParticipant
 from src.models.moment import Moment, MomentLike
 from src.models.admin import Admin
 from src.models.subscription import SubscriptionPlan
 
 def seed_database():
-    print("[1/5] Iniciando o povoamento do Banco de Dados Proximous...")
+    print("=" * 60)
+    print("🚀 INICIANDO POVOAMENTO DO BANCO DE DADOS PROXIMOUS (SALVADOR/BA)")
+    print("=" * 60)
 
     with app.app_context():
-        # Clean existing tables
-        print("[2/5] Limpando e recriando tabelas...")
+        # Clean existing tables and recreate
+        print("\n[1/6] Recriando tabelas...")
         db.drop_all()
         db.create_all()
 
-        # 1. ADMIN USER
-        admin = Admin(
-            email='admin@proximous.com',
-            name='Administrador Principal',
+        # 1. ADMINS
+        print("[2/6] Criando administradores...")
+        ramon_admin = Admin(
+            email='ramon@proximous.com',
+            name='Ramon Cerqueira',
             role='super_admin'
         )
-        admin.set_password('admin123')
-        db.session.add(admin)
+        ramon_admin.set_password('141120Rj.')
+        db.session.add(ramon_admin)
+
+        system_admin = Admin(
+            email='admin@proximous.com',
+            name='Administrador Master',
+            role='super_admin'
+        )
+        system_admin.set_password('141120Rj.')
+        db.session.add(system_admin)
 
         # 2. ACHIEVEMENTS
+        print("[3/6] Criando conquistas e planos...")
         achievements_data = [
-            {'name': 'Primeiro Passo', 'description': 'Criou seu perfil no Proximous', 'icon': 'Sparkles', 'category': 'milestone'},
-            {'name': 'Empático', 'description': 'Alcançou 300+ pontos de empatia', 'icon': 'Heart', 'category': 'engagement'},
-            {'name': 'Explorador Urbano', 'description': 'Conectou-se em 3 bairros diferentes', 'icon': 'MapPin', 'category': 'social'},
-            {'name': 'Construtor de Pontes', 'description': 'Enviou mais de 5 mensagens em conexões reais', 'icon': 'MessageCircle', 'category': 'engagement'}
+            {'name': 'Primeiro Passo', 'description': 'Criou seu perfil VIP no Proximous', 'icon': 'Sparkles', 'category': 'milestone'},
+            {'name': 'Empático de Elite', 'description': 'Alcançou 900+ pontos de empatia', 'icon': 'Heart', 'category': 'engagement'},
+            {'name': 'Explorador de Salvador', 'description': 'Conectou-se no Rio Vermelho, Barra e Pituba', 'icon': 'MapPin', 'category': 'social'},
+            {'name': 'Criador de Rolês', 'description': 'Criou encontros ao vivo no Radar', 'icon': 'Flame', 'category': 'social'},
+            {'name': 'Mestre das Conexões', 'description': 'Mais de 10 matches com conversas ativas', 'icon': 'MessageCircle', 'category': 'engagement'}
         ]
         
         created_achievements = {}
@@ -52,8 +66,8 @@ def seed_database():
 
         # 3. SUBSCRIPTION PLANS
         plans_data = [
-            {'name': 'Proximous Mensal', 'price': 29.90, 'plan_type': 'monthly', 'features': ['Curtidas ilimitadas', 'Ver quem te curtiu', 'Filtros avançados']},
-            {'name': 'Proximous Anual', 'price': 19.90, 'plan_type': 'annual', 'features': ['Todos os recursos Pro', 'Economia de 40%', 'Destaque no algoritmo']}
+            {'name': 'Proximous Black Mensal', 'price': 39.90, 'plan_type': 'monthly', 'features': ['Radar Ilimitado 25km', 'Ver quem te curtiu', 'Criação ilimitada de Rolês', 'Selo VIP']},
+            {'name': 'Proximous Black Anual', 'price': 24.90, 'plan_type': 'annual', 'features': ['Todos os recursos VIP', 'Economia de 45%', 'Destaque prioritário no Radar']}
         ]
         for p in plans_data:
             plan = SubscriptionPlan(
@@ -64,122 +78,192 @@ def seed_database():
             )
             db.session.add(plan)
 
-        # 4. USERS
-        print("[3/5] Cadastrando usuarios reais no banco...")
+        # 4. USERS EM SALVADOR/BA
+        print("[4/6] Cadastrando usuários reais de Salvador/BA...")
         users_raw = [
+            # USUÁRIO PRINCIPAL COM TODOS OS PRIVILÉGIOS (RAMON CERQUEIRA)
             {
-                'email': 'teste@test.com',
-                'name': 'Ramon Teste',
-                'age': 32,
+                'email': 'ramon@proximous.com',
+                'name': 'Ramon Cerqueira',
+                'password': '141120Rj.',
+                'age': 33,
                 'gender': 'male',
                 'looking_for': 'all',
                 'social_style': 'extroverted',
-                'bio': 'Desenvolvedor apaixonado por café, boas conversas e tecnologias que conectam pessoas reais.',
-                'city': 'São Paulo',
-                'lat': -23.5505,
-                'lon': -46.6333,
-                'empathy_points': 340,
+                'bio': 'Fundador & Desenvolvedor do Proximous. Apaixonado por tecnologia, bons cafés no Rio Vermelho, negócios e esportes.',
+                'city': 'Salvador',
+                'lat': -12.9866,
+                'lon': -38.4907, # Rio Vermelho
+                'empathy_points': 980,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Tomando um café no Rio Vermelho ☕ • Bora trocar uma ideia!',
                 'photos': [
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500',
-                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500'
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80'
                 ],
-                'interests': ['Música', 'Cinema', 'Tecnologia', 'Viagens', 'Gastronomia'],
-                'personality_tags': ['Extrovertido', 'Criativo', 'Empático', 'Comunicativo']
+                'interests': ['Tecnologia', 'Café', 'Beach Tennis', 'Negócios', 'Música', 'Viagens'],
+                'personality_tags': ['Fundador', 'Criativo', 'Extrovertido', 'Empático', 'Visionário']
             },
+            # USUÁRIOS NO RADAR DE SALVADOR
             {
-                'email': 'mariana@proximous.com',
-                'name': 'Mariana Silva',
-                'age': 25,
+                'email': 'camila@proximous.com',
+                'name': 'Camila Rocha',
+                'password': 'Password123',
+                'age': 26,
                 'gender': 'female',
-                'looking_for': 'male',
-                'social_style': 'introverted',
-                'bio': 'Adoro música MPB, café especial e caminhadas tranquilas no parque no fim de semana.',
-                'city': 'São Paulo',
-                'lat': -23.5512,
-                'lon': -46.6342,
-                'empathy_points': 420,
+                'looking_for': 'all',
+                'social_style': 'ambiverted',
+                'bio': 'Designer UX/UI apaixonada por arte moderna, exposições e um café especial no fim de tarde.',
+                'city': 'Salvador',
+                'lat': -12.9860,
+                'lon': -38.4890, # Rio Vermelho (1.2 km)
+                'empathy_points': 540,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Disponível para um café no Rio Vermelho ☕',
                 'photos': [
-                    'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=500',
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80'
                 ],
-                'interests': ['Café', 'Música', 'Livros', 'Fotografia', 'Yoga'],
-                'personality_tags': ['Gentil', 'Calma', 'Atenciosa', 'Criativa']
+                'interests': ['Café', 'Design', 'Praia', 'Arte', 'Viagens'],
+                'personality_tags': ['Criativa', 'Sociável', 'Alegre', 'Inspiradora']
             },
             {
                 'email': 'lucas@proximous.com',
                 'name': 'Lucas Santos',
+                'password': 'Password123',
                 'age': 28,
                 'gender': 'male',
                 'looking_for': 'female',
                 'social_style': 'extroverted',
-                'bio': 'Fotógrafo urbano, praticante de corrida e amante de culinária italiana.',
-                'city': 'São Paulo',
-                'lat': -23.5545,
-                'lon': -46.6385,
-                'empathy_points': 280,
+                'bio': 'Fotógrafo e amante da orla de Salvador. Sempre pronto para um pôr do sol na Barra ou drinks descontraídos.',
+                'city': 'Salvador',
+                'lat': -13.0098,
+                'lon': -38.5312, # Barra (2.1 km)
+                'empathy_points': 420,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Passeio e água de coco na Barra 🥥',
                 'photos': [
-                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500',
-                    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500'
+                    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80'
                 ],
-                'interests': ['Fotografia', 'Corrida', 'Gastronomia', 'Cinema', 'Tecnologia'],
-                'personality_tags': ['Extrovertido', 'Energético', 'Curioso']
-            },
-            {
-                'email': 'camila@proximous.com',
-                'name': 'Camila Rocha',
-                'age': 24,
-                'gender': 'female',
-                'looking_for': 'all',
-                'social_style': 'ambiverted',
-                'bio': 'Designer UX/UI apaixonada por arte moderna, exposições e viagens de mochila.',
-                'city': 'São Paulo',
-                'lat': -23.5605,
-                'lon': -46.6455,
-                'empathy_points': 510,
-                'photos': [
-                    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500',
-                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500'
-                ],
-                'interests': ['Design', 'Arte', 'Viagens', 'Música', 'Tecnologia'],
-                'personality_tags': ['Criativa', 'Observadora', 'Empática', 'Inspiradora']
+                'interests': ['Fotografia', 'Sunset', 'Corrida', 'Drinks', 'Música'],
+                'personality_tags': ['Comunicativo', 'Esportivo', 'Amigável']
             },
             {
                 'email': 'beatriz@proximous.com',
-                'name': 'Beatriz Oliveira',
+                'name': 'Beatriz Costa',
+                'password': 'Password123',
+                'age': 24,
+                'gender': 'female',
+                'looking_for': 'all',
+                'social_style': 'extroverted',
+                'bio': 'Praticante de Beach Tennis e apaixonada pela energia de Salvador. Bora jogar uma partida ou tomar um vinho!',
+                'city': 'Salvador',
+                'lat': -12.9972,
+                'lon': -38.4590, # Pituba (2.5 km)
+                'empathy_points': 610,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Treino de Beach Tennis na orla 🎾',
+                'photos': [
+                    'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80'
+                ],
+                'interests': ['Beach Tennis', 'Crossfit', 'Gastronomia', 'Vinhos'],
+                'personality_tags': ['Determinada', 'Extrovertida', 'Fitness']
+            },
+            {
+                'email': 'joao@proximous.com',
+                'name': 'João Silva',
+                'password': 'Password123',
+                'age': 29,
+                'gender': 'male',
+                'looking_for': 'female',
+                'social_style': 'introverted',
+                'bio': 'Desenvolvedor mobile, fã de cinema IMAX, games de estratégia e rodízio de sushi.',
+                'city': 'Salvador',
+                'lat': -12.9877,
+                'lon': -38.4722, # Caminho das Árvores (2.8 km)
+                'empathy_points': 390,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Cinema e almoço no Salvador Shopping 🍿',
+                'photos': [
+                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80'
+                ],
+                'interests': ['Cinema', 'Tecnologia', 'Games', 'Sushi'],
+                'personality_tags': ['Tranquilo', 'Geek', 'Bem-humorado']
+            },
+            {
+                'email': 'ana@proximous.com',
+                'name': 'Ana Lima',
+                'password': 'Password123',
+                'age': 25,
+                'gender': 'female',
+                'looking_for': 'all',
+                'social_style': 'ambiverted',
+                'bio': 'Historiadora e amante do Centro Histórico. Adoro bater papo nas escadarias do Santo Antônio ao entardecer.',
+                'city': 'Salvador',
+                'lat': -12.9667,
+                'lon': -38.5042, # Santo Antônio Além do Carmo (3.1 km)
+                'empathy_points': 480,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Sunset no Santo Antônio 🌅',
+                'photos': [
+                    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80'
+                ],
+                'interests': ['Arte', 'Música ao Vivo', 'Café Especial', 'História'],
+                'personality_tags': ['Cultural', 'Autêntica', 'Simpática']
+            },
+            {
+                'email': 'juliana@proximous.com',
+                'name': 'Juliana Ramos',
+                'password': 'Password123',
                 'age': 27,
                 'gender': 'female',
                 'looking_for': 'all',
                 'social_style': 'introverted',
-                'bio': 'Desenvolvedora de jogos, entusiasta de ficção científica e tutora de dois gatos fofos.',
-                'city': 'São Paulo',
-                'lat': -23.5855,
-                'lon': -46.6705,
-                'empathy_points': 390,
+                'bio': 'Bióloga marinha e tutora de golden retriever. Amo praia calma, yoga matinal e café coado.',
+                'city': 'Salvador',
+                'lat': -13.0065,
+                'lon': -38.5100, # Ondina (1.8 km)
+                'empathy_points': 520,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Passeio com pets na praça 🐶',
                 'photos': [
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500',
-                    'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=500'
+                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80'
                 ],
-                'interests': ['Gaming', 'Sci-Fi', 'Programação', 'Animes', 'Café'],
-                'personality_tags': ['Inteligente', 'Tímida', 'Focada', 'Empática']
+                'interests': ['Pets', 'Natureza', 'Yoga', 'Leitura'],
+                'personality_tags': ['Carinhosa', 'Empática', 'Zen']
             },
             {
                 'email': 'gabriel@proximous.com',
-                'name': 'Gabriel Lima',
+                'name': 'Gabriel Matos',
+                'password': 'Password123',
                 'age': 30,
                 'gender': 'male',
                 'looking_for': 'female',
                 'social_style': 'extroverted',
-                'bio': 'Arquiteto, aficionado por música ao vivo, festivais de jazz e passeios de bicicleta.',
-                'city': 'São Paulo',
-                'lat': -23.5705,
-                'lon': -46.6555,
-                'empathy_points': 310,
+                'bio': 'Arquiteto, apaixonado por gastronomia autoral, jazz e drinks bem preparados.',
+                'city': 'Salvador',
+                'lat': -12.9800,
+                'lon': -38.4800, # Horto Florestal (1.5 km)
+                'empathy_points': 450,
+                'is_verified': True,
+                'is_premium': True,
+                'status_text': 'Drinks artesanais e jazz 🍸',
                 'photos': [
-                    'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=500',
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500'
+                    'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=800&q=80'
                 ],
-                'interests': ['Arquitetura', 'Jazz', 'Ciclismo', 'Cerveja Artesanal', 'Viagens'],
-                'personality_tags': ['Sociável', 'Aventureiro', 'Alegre']
+                'interests': ['Jazz', 'Drinks', 'Culinária', 'Arquitetura'],
+                'personality_tags': ['Sofisticado', 'Gourmet', 'Acolhedor']
             }
         ]
 
@@ -198,10 +282,13 @@ def seed_database():
                 longitude=u_data['lon'],
                 empathy_points=u_data['empathy_points'],
                 profile_photo_url=u_data['photos'][0],
-                is_premium=True,
-                status='available'
+                is_verified=u_data.get('is_verified', True),
+                is_premium=u_data.get('is_premium', True),
+                status='available',
+                available_until=datetime.utcnow() + timedelta(hours=8),
+                current_status_text=u_data.get('status_text', 'Disponível no Radar ⚡')
             )
-            user.set_password('Password123')
+            user.set_password(u_data['password'])
             user.set_photos(u_data['photos'])
             user.set_interests(u_data['interests'])
             user.set_personality_tags(u_data['personality_tags'])
@@ -214,74 +301,163 @@ def seed_database():
                 ua = UserAchievement(user_id=user.id, achievement_id=created_achievements['Primeiro Passo'].id)
                 db.session.add(ua)
 
-        main_user = user_objects['teste@test.com']
-        mariana = user_objects['mariana@proximous.com']
+        ramon = user_objects['ramon@proximous.com']
         camila = user_objects['camila@proximous.com']
-        beatriz = user_objects['beatriz@proximous.com']
         lucas = user_objects['lucas@proximous.com']
+        beatriz = user_objects['beatriz@proximous.com']
+        joao = user_objects['joao@proximous.com']
+        ana = user_objects['ana@proximous.com']
+        juliana = user_objects['juliana@proximous.com']
         gabriel = user_objects['gabriel@proximous.com']
 
-        # 5. LIKES & MATCHES
-        print("[4/5] Gerando matches e curtidas mútua entre perfis...")
-        match_targets = [mariana, camila, beatriz]
-        for target in match_targets:
-            like1 = Like(sender_id=main_user.id, receiver_id=target.id, like_type='like')
-            like2 = Like(sender_id=target.id, receiver_id=main_user.id, like_type='like')
-            db.session.add(like1)
-            db.session.add(like2)
+        # 5. ATIVIDADES & ROLÊS EM SALVADOR/BA
+        print("[5/6] Criando Rolês & Convites em Salvador/BA...")
+        activities_data = [
+            {
+                'user': camila,
+                'category': '☕ Café & Papo',
+                'title': 'Café Especial no Cafelier & Bate-Papo',
+                'description': 'Bora tomar um expresso artesanal no Santo Antônio com vista para a Baía de Todos os Santos e colocar o papo em dia! ☕✨',
+                'location_name': 'Cafelier Santo Antônio • Salvador, BA',
+                'scheduled_time': 'Hoje às 16:30',
+                'lat': -12.9667,
+                'lon': -38.5042,
+                'max_participants': 3,
+                'photo_url': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+                'duration_hours': 6
+            },
+            {
+                'user': lucas,
+                'category': '🍻 Drinks & Bar',
+                'title': 'Drinks & Sunset no Farol da Barra',
+                'description': 'Música boa, drinks gelados e o melhor pôr do sol de Salvador na orla da Barra! 🍸🌅',
+                'location_name': 'Farol da Barra • Salvador, BA',
+                'scheduled_time': 'Hoje às 18:00',
+                'lat': -13.0098,
+                'lon': -38.5312,
+                'max_participants': 5,
+                'photo_url': 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80',
+                'duration_hours': 8
+            },
+            {
+                'user': beatriz,
+                'category': '🎾 Beach Tennis',
+                'title': 'Partida de Beach Tennis no Porto',
+                'description': 'Aluguei a quadra de areia no Porto da Barra para uma partida descontraída em duplas. Falta 1 pessoa!',
+                'location_name': 'Porto da Barra • Salvador, BA',
+                'scheduled_time': 'Hoje às 17:30',
+                'lat': -13.0030,
+                'lon': -38.5310,
+                'max_participants': 4,
+                'photo_url': 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80',
+                'duration_hours': 4
+            },
+            {
+                'user': joao,
+                'category': '🍿 Cinema & Pipoca',
+                'title': 'Sessão Cinema IMAX & Pipoca',
+                'description': 'Assistir ao lançamento da semana no cinema IMAX do Salvador Shopping e depois comer algo bacana.',
+                'location_name': 'Salvador Shopping • Salvador, BA',
+                'scheduled_time': 'Hoje às 20:30',
+                'lat': -12.9877,
+                'lon': -38.4722,
+                'max_participants': 4,
+                'photo_url': 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
+                'duration_hours': 6
+            },
+            {
+                'user': gabriel,
+                'category': '🍕 Pizza & Gastro',
+                'title': 'Pizzaria Artesanal no Rio Vermelho',
+                'description': 'Pizzas de longa fermentação, carta de vinhos e bom papo no coração do Rio Vermelho.',
+                'location_name': 'Largo de Santana, Rio Vermelho • Salvador, BA',
+                'scheduled_time': 'Hoje às 20:00',
+                'lat': -12.9866,
+                'lon': -38.4907,
+                'max_participants': 4,
+                'photo_url': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+                'duration_hours': 6
+            }
+        ]
+
+        for act_info in activities_data:
+            act = Activity(
+                user_id=act_info['user'].id,
+                category=act_info['category'],
+                title=act_info['title'],
+                description=act_info['description'],
+                location_name=act_info['location_name'],
+                scheduled_time=act_info['scheduled_time'],
+                latitude=act_info['lat'],
+                longitude=act_info['lon'],
+                max_participants=act_info['max_participants'],
+                photo_url=act_info['photo_url'],
+                expires_at=datetime.utcnow() + timedelta(hours=act_info['duration_hours']),
+                status='active'
+            )
+            db.session.add(act)
+            db.session.flush()
+
+            # Add creator as approved participant
+            part = ActivityParticipant(activity_id=act.id, user_id=act_info['user'].id, status='approved')
+            db.session.add(part)
+
+            # Add Ramon as participant in one of them
+            if act_info['category'] == '☕ Café & Papo':
+                db.session.add(ActivityParticipant(activity_id=act.id, user_id=ramon.id, status='approved'))
+
+        # 6. MATCHES, MENSAGENS & MOMENTOS
+        print("[6/6] Gerando conexões, mensagens e momentos reais...")
+        
+        # Matches com Ramon
+        vip_matches = [camila, beatriz, ana]
+        for m_user in vip_matches:
+            like_sent = Like(sender_id=ramon.id, receiver_id=m_user.id, like_type='like')
+            like_recv = Like(sender_id=m_user.id, receiver_id=ramon.id, like_type='like')
+            db.session.add(like_sent)
+            db.session.add(like_recv)
             db.session.flush()
 
             match = Match(
-                user1_id=min(main_user.id, target.id),
-                user2_id=max(main_user.id, target.id)
+                user1_id=min(ramon.id, m_user.id),
+                user2_id=max(ramon.id, m_user.id)
             )
             db.session.add(match)
             db.session.flush()
 
-            # 6. MESSAGES FOR MATCHES
-            msgs = [
-                (target.id, main_user.id, f"Oi {main_user.name}! Que legal nos conectarmos por aqui!"),
-                (main_user.id, target.id, f"Ola {target.name}! Tudo otimo por aqui. Vi que voce tambem gosta de cafe!"),
-                (target.id, main_user.id, "Sim! Adoro cafes especiais no centro. Qual o seu lugar favorito?")
-            ]
-            for s_id, r_id, content in msgs:
-                m = Message(
-                    sender_id=s_id,
-                    receiver_id=r_id,
-                    match_id=match.id,
-                    content=content,
-                    is_read=True
-                )
-                db.session.add(m)
+            # Mensagem de boas-vindas
+            m = Message(
+                sender_id=m_user.id,
+                receiver_id=ramon.id,
+                match_id=match.id,
+                content=f"Oi Ramon! Que massa ver você no Proximous! Vi que você também curte café no Rio Vermelho!",
+                is_read=True
+            )
+            db.session.add(m)
 
-        # Pending Received Likes (Lucas & Gabriel liked main_user)
-        db.session.add(Like(sender_id=lucas.id, receiver_id=main_user.id, like_type='compliment', message="Adorei o seu perfil!"))
-        db.session.add(Like(sender_id=gabriel.id, receiver_id=main_user.id, like_type='icebreaker'))
-
-        # 7. MOMENTS (FEED POSTS)
-        print("[5/5] Publicando momentos reais no feed...")
-        moments_data = [
-            (
-                mariana.id,
-                "Domingo ensolarado no Parque do Ibirapuera! Quem mais aproveitou o dia para ler ao ar livre?",
-                "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600",
-                14
-            ),
+        # Momentos no Feed
+        moments = [
             (
                 camila.id,
-                "Exposicao nova de arte contemporanea imperdivel no MASP. Recomendo demais a visita!",
-                "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600",
-                22
+                "Fim de tarde maravilhoso no Largo da Dinha, Rio Vermelho! A energia de Salvador é única ☀️✨",
+                "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800",
+                34
             ),
             (
-                main_user.id,
-                "Cafe coado de grao especial para comecar o projeto da semana com energia total!",
-                "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600",
-                18
+                lucas.id,
+                "Sunset perfeito de hoje no Farol da Barra. Quem aproveitou a orla?",
+                "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800",
+                52
+            ),
+            (
+                ramon.id,
+                "Lançamento do Proximous a todo vapor em Salvador! Conexões autênticas em tempo real 🚀💜",
+                "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800",
+                89
             )
         ]
 
-        for u_id, content, photo, likes in moments_data:
+        for u_id, content, photo, likes in moments:
             moment = Moment(
                 user_id=u_id,
                 content=content,
@@ -291,7 +467,13 @@ def seed_database():
             db.session.add(moment)
 
         db.session.commit()
-        print("[SUCESSO] Banco de dados populado com sucesso com dados reais do Proximous!")
+        print("\n" + "=" * 60)
+        print("✅ BANCO DE DADOS PROXIMOUS POPULADO COM SUCESSO!")
+        print("👤 Usuário Master: ramon@proximous.com")
+        print("🔑 Senha:         141120Rj.")
+        print("🛡️ Acesso Admin:   /admin (Admin Master & Ramon)")
+        print("📍 Localização:    Salvador/BA (Rio Vermelho, Barra, Pituba)")
+        print("=" * 60 + "\n")
 
 if __name__ == '__main__':
     seed_database()

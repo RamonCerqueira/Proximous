@@ -221,53 +221,11 @@ const Login = () => {
               </motion.div>
             </form>
 
-            {/* Quick Test Shortcuts */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="pt-4 border-t border-border/60 space-y-3"
-            >
-              <p className="text-[11px] text-muted-foreground text-center font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-                <Zap className="h-3.5 w-3.5 text-purple-400" />
-                Acesso Rápido de Teste
-              </p>
-              
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  onClick={() => handleAutoLogin('teste@test.com', 'Password123')}
-                  variant="outline"
-                  className="h-10 text-[11px] font-extrabold border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 rounded-xl"
-                  disabled={loading}
-                >
-                  Teste
-                </Button>
-
-                <Button
-                  onClick={() => handleAutoLogin('user1@test.com', 'Password123')}
-                  variant="outline"
-                  className="h-10 text-[11px] font-extrabold border-purple-500/30 text-purple-400 hover:bg-purple-500/10 rounded-xl"
-                  disabled={loading}
-                >
-                  User1
-                </Button>
-
-                <Button
-                  onClick={() => handleAutoLogin('user2@test.com', 'Password123')}
-                  variant="outline"
-                  className="h-10 text-[11px] font-extrabold border-pink-500/30 text-pink-400 hover:bg-pink-500/10 rounded-xl"
-                  disabled={loading}
-                >
-                  User2
-                </Button>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="text-center pt-2 space-y-2"
+              className="text-center pt-2 space-y-2 border-t border-border/60"
             >
               <Link
                 to="/register"

@@ -21,11 +21,14 @@ import {
   Wine,
   Dumbbell,
   Film,
-  RefreshCw
+  RefreshCw,
+  Ticket
 } from 'lucide-react';
 import UserProfileModal from '@/components/UserProfileModal';
 import { AvailabilityModal, CreateActivityModal, FilterModal } from '@/components/discover/DiscoverModals';
-import MyActivitiesManager from '@/components/now/MyActivitiesManager';
+import MyActivitiesModal from '@/components/now/MyActivitiesManager';
+import AllActivitiesModal from '@/components/now/AllActivitiesModal';
+import AllAvailableUsersModal from '@/components/now/AllAvailableUsersModal';
 
 const QUICK_CATEGORIES = [
   { id: 'all', label: 'Todos', icon: LayoutGrid },
@@ -44,6 +47,8 @@ const ModoAgora = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activitiesList, setActivitiesList] = useState([]);
   const [myCreatedActivities, setMyCreatedActivities] = useState([]);
+  const [myRequestedActivities, setMyRequestedActivities] = useState([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // User detected city / Geolocation state
@@ -54,6 +59,9 @@ const ModoAgora = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
+  const [showAllActivitiesModal, setShowAllActivitiesModal] = useState(false);
+  const [showAllUsersModal, setShowAllUsersModal] = useState(false);
+  const [showMyActivitiesModal, setShowMyActivitiesModal] = useState(false);
   const [selectedProfileModal, setSelectedProfileModal] = useState(null);
   const [feedbackToast, setFeedbackToast] = useState(null);
   const [likedUserIds, setLikedUserIds] = useState(new Set());
@@ -136,185 +144,79 @@ const ModoAgora = () => {
       if (actRes.status === 'fulfilled' && actRes.value.data.activities) {
         fetchedActivities = actRes.value.data.activities;
       }
-      if (myActRes.status === 'fulfilled' && myActRes.value.data.activities) {
-        const myList = myActRes.value.data.activities.filter(a => a.user_id === user?.id);
-        setMyCreatedActivities(myList);
+      if (myActRes.status === 'fulfilled') {
+        const myData = myActRes.value.data;
+        if (myData.created_activities) {
+          setMyCreatedActivities(myData.created_activities);
+        } else if (myData.activities) {
+          setMyCreatedActivities(myData.activities.filter(a => a.user_id === user?.id));
+        }
+        if (myData.requested_activities) {
+          setMyRequestedActivities(myData.requested_activities);
+        }
+        if (typeof myData.pending_requests_count === 'number') {
+          setPendingRequestsCount(myData.pending_requests_count);
+        }
       }
 
-      // High-standard fallbacks calibrated for Salvador & realistic testing
-      const defaultEvents = [
-        {
-          id: 'act_live_1',
-          user_id: 'host_1',
-          creator_name: 'Camila Rocha',
-          creator_photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-          category: 'coffee',
-          title: 'Café da tarde',
-          badge_type: 'AGORA',
-          badge_color: 'bg-amber-500/90 text-black',
-          location_name: 'Barra Shopping',
-          scheduled_time: 'Agora · 16:30',
-          distance_km: 1.2,
-          photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
-          button_gradient: 'from-[#8A2BE2] to-[#9B20F0]',
-          participant_avatars: [
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
-          ],
-          extra_participants: 2,
-        },
-        {
-          id: 'act_live_2',
-          user_id: 'host_2',
-          creator_name: 'Gabriel Matos',
-          creator_photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-          category: 'drinks',
-          title: 'Drinks no Rio Vermelho',
-          badge_type: 'AGORA',
-          badge_color: 'bg-orange-500/90 text-white',
-          location_name: 'Rio Vermelho',
-          scheduled_time: 'Agora · 17:00',
-          distance_km: 2.4,
-          photo_url: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80',
-          button_gradient: 'from-[#D91680] to-[#FF2B85]',
-          participant_avatars: [
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
-            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-          ],
-          extra_participants: 3,
-        },
-        {
-          id: 'act_live_3',
-          user_id: 'host_3',
-          creator_name: 'Juliana Ramos',
-          creator_photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
-          category: 'cinema',
-          title: 'Cinema hoje à noite',
-          badge_type: 'HOJE',
-          badge_color: 'bg-purple-600/90 text-white',
-          location_name: 'Salvador Shopping',
-          scheduled_time: 'Hoje · 20:00',
-          distance_km: 4.1,
-          photo_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
-          button_gradient: 'from-[#8A2BE2] to-[#9B20F0]',
-          participant_avatars: [
-            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
-            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100',
-          ],
-          extra_participants: 1,
-        },
-        {
-          id: 'act_live_4',
-          user_id: 'host_4',
-          creator_name: 'Lucas Santos',
-          creator_photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-          category: 'sport',
-          title: 'Treino no Parque & Corrida',
-          badge_type: 'HOJE',
-          badge_color: 'bg-emerald-500/90 text-slate-950 font-bold',
-          location_name: 'Parque da Cidade',
-          scheduled_time: 'Hoje · 18:30',
-          distance_km: 3.2,
-          photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
-          button_gradient: 'from-[#10B981] to-[#35E38A]',
-          participant_avatars: [
-            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-          ],
-          extra_participants: 2,
+      // Format Real Database Activities
+      const formattedActivities = fetchedActivities.map(act => {
+        const cat = act.category || '';
+        const title = act.title || '';
+        let button_gradient = 'from-[#8A2BE2] to-[#9B20F0]';
+        let badge_type = 'HOJE';
+        let badge_color = 'bg-purple-600/90 text-white';
+
+        if (cat.includes('Café') || title.includes('Café')) {
+          badge_type = 'AGORA';
+          badge_color = 'bg-amber-500/90 text-black';
+          button_gradient = 'from-[#8A2BE2] to-[#9B20F0]';
+        } else if (cat.includes('Drinks') || title.includes('Drinks')) {
+          badge_type = 'AGORA';
+          badge_color = 'bg-orange-500/90 text-white';
+          button_gradient = 'from-[#D91680] to-[#FF2B85]';
+        } else if (cat.includes('Beach') || cat.includes('Treino')) {
+          badge_type = 'HOJE';
+          badge_color = 'bg-emerald-500/90 text-slate-950 font-bold';
+          button_gradient = 'from-[#10B981] to-[#35E38A]';
         }
-      ];
 
-      const defaultPeople = [
-        {
-          id: 'radar_p1',
-          name: 'Camila',
-          full_name: 'Camila, 26',
-          age: 26,
-          status_label: 'Disponível agora',
-          status_type: 'now',
-          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
-          profile_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-          distance: 1.2,
-          distance_text: '1,2 km',
-          tags: ['☕ Café', '✈ Viagem'],
-          is_online: true
-        },
-        {
-          id: 'radar_p2',
-          name: 'Lucas',
-          full_name: 'Lucas, 28',
-          age: 28,
-          status_label: 'Disponível agora',
-          status_type: 'now',
-          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
-          profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-          distance: 2.1,
-          distance_text: '2,1 km',
-          tags: ['🏋️ Treino', '🎵 Música'],
-          is_online: true
-        },
-        {
-          id: 'radar_p3',
-          name: 'Beatriz',
-          full_name: 'Beatriz, 24',
-          age: 24,
-          status_label: 'Disponível mais tarde',
-          status_type: 'later',
-          status_color: 'bg-amber-950/70 text-amber-300 border-amber-500/30',
-          profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=600&q=80',
-          distance: 2.5,
-          distance_text: '2,5 km',
-          tags: ['🍿 Cinema', '🌊 Praia'],
-          is_online: false,
-          is_later: true
-        },
-        {
-          id: 'radar_p4',
-          name: 'João',
-          full_name: 'João, 27',
-          age: 27,
-          status_label: 'Disponível agora',
-          status_type: 'now',
-          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
-          profile_photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
-          distance: 2.8,
-          distance_text: '2,8 km',
-          tags: ['🎾 Beach Tennis', '🍕 Gastro'],
-          is_online: true
-        },
-        {
-          id: 'radar_p5',
-          name: 'Ana',
-          full_name: 'Ana, 25',
-          age: 25,
-          status_label: 'Disponível agora',
-          status_type: 'now',
-          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
-          profile_photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
-          distance: 3.1,
-          distance_text: '3,1 km',
-          tags: ['🍸 Drinks', '📸 Fotos'],
-          is_online: true
-        }
-      ];
+        const avatars = act.participants && act.participants.length > 0 
+          ? act.participants.map(p => p.profile_photo_url).filter(Boolean)
+          : [act.creator_photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'];
 
-      if (fetchedActivities.length === 0) {
-        let filtered = defaultEvents;
-        if (selectedCategory !== 'all') {
-          filtered = defaultEvents.filter(e => e.category === selectedCategory);
-        }
-        fetchedActivities = filtered;
-      }
+        return {
+          ...act,
+          badge_type,
+          badge_color,
+          button_gradient,
+          participant_avatars: avatars.length > 0 ? avatars : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'],
+          extra_participants: Math.max(0, (act.participant_count || 1) - 1)
+        };
+      });
 
-      if (fetchedUsers.length === 0) {
-        fetchedUsers = defaultPeople;
-      }
+      // Format Real Database Radar Users
+      const formattedUsers = fetchedUsers.map(u => {
+        const rawDist = u.distance || u.distance_km || 1.2;
+        const dist = typeof rawDist === 'number' ? rawDist.toFixed(1).replace('.', ',') : rawDist;
+        return {
+          ...u,
+          full_name: u.age ? `${u.name}, ${u.age}` : u.name,
+          status_label: u.current_status_text || (u.status === 'available' ? 'Disponível agora' : 'Disponível mais tarde'),
+          status_type: u.status === 'available' ? 'now' : 'later',
+          status_color: u.status === 'available' 
+            ? 'bg-purple-900/60 text-purple-200 border-purple-500/30' 
+            : 'bg-amber-950/70 text-amber-300 border-amber-500/30',
+          distance_text: `${dist} km`,
+          tags: Array.isArray(u.interests) && u.interests.length > 0 
+            ? u.interests.slice(0, 2)
+            : ['☕ Café', '✈ Viagem'],
+          is_online: u.status === 'available',
+        };
+      });
 
-      setActivitiesList(fetchedActivities);
-      setAvailableUsers(fetchedUsers);
+      setActivitiesList(formattedActivities);
+      setAvailableUsers(formattedUsers);
     } catch (err) {
       console.error('Error fetching radar data:', err);
     } finally {
@@ -327,10 +229,45 @@ const ModoAgora = () => {
     setTimeout(() => setFeedbackToast(null), 4000);
   };
 
+  const handleApproveCandidate = async (activityId, candidateUserId) => {
+    try {
+      await activitiesAPI.approveParticipant(activityId, candidateUserId);
+      triggerToast('🎉 Candidato aprovado! O chat com ele foi liberado.');
+      fetchRadarData();
+    } catch (err) {
+      triggerToast('Erro ao aprovar candidato.');
+    }
+  };
+
+  const handleRejectCandidate = async (activityId, candidateUserId) => {
+    try {
+      await activitiesAPI.rejectParticipant(activityId, candidateUserId);
+      triggerToast('Solicitação recusada.');
+      fetchRadarData();
+    } catch (err) {
+      triggerToast('Erro ao recusar solicitação.');
+    }
+  };
+
+  const handleCancelActivity = async (activityId) => {
+    try {
+      await activitiesAPI.deleteActivity(activityId);
+      triggerToast('Rolê encerrado com sucesso.');
+      fetchRadarData();
+    } catch (err) {
+      triggerToast('Erro ao encerrar rolê.');
+    }
+  };
+
+  const handleOpenChat = (targetUserId) => {
+    navigate(`/messages?userId=${targetUserId}`);
+  };
+
   const handleJoinActivity = async (actId) => {
     try {
       await activitiesAPI.join(actId);
-      triggerToast('🙋‍♂️ Solicitação enviada com sucesso! O anfitrião foi notificado.');
+      triggerToast('🙋‍♂️ Solicitação enviada! Veja o status na aba "Meus Rolês".');
+      fetchRadarData();
     } catch (err) {
       triggerToast('Solicitação registrada para o rolê! ⚡');
     }
@@ -410,7 +347,7 @@ const ModoAgora = () => {
       </AnimatePresence>
 
       {/* 1. TOP HEADER */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-2 gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5">
             Quem está <span className="text-[#FF4FA3]">por perto</span>
@@ -426,13 +363,19 @@ const ModoAgora = () => {
           </button>
         </div>
 
-        <button 
-          onClick={() => navigate('/notifications')}
-          className="relative p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors border border-white/5"
-          title="Notificações"
+        {/* Action button: Meus Rolês */}
+        <button
+          onClick={() => setShowMyActivitiesModal(true)}
+          className="relative px-3.5 py-2 rounded-2xl bg-[#150F28] hover:bg-[#1C1535] border border-purple-500/30 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0"
         >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FF4FA3]" />
+          <Ticket className="w-4 h-4 text-pink-400" />
+          <span className="hidden sm:inline">Meus Rolês</span>
+          <span className="sm:hidden">Rolês</span>
+          {(pendingRequestsCount > 0 || myRequestedActivities.length > 0 || myCreatedActivities.length > 0) && (
+            <span className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse shadow-sm">
+              {pendingRequestsCount || (myCreatedActivities.length + myRequestedActivities.length)}
+            </span>
+          )}
         </button>
       </div>
 
@@ -475,7 +418,7 @@ const ModoAgora = () => {
             </span>
           </div>
           <button 
-            onClick={() => setShowFilterModal(true)}
+            onClick={() => setShowAllUsersModal(true)}
             className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
           >
             Ver todos
@@ -509,11 +452,11 @@ const ModoAgora = () => {
 
           {/* "+3 Pessoas" Circle Badge */}
           <div 
-            onClick={() => setShowFilterModal(true)}
+            onClick={() => setShowAllUsersModal(true)}
             className="flex flex-col items-center space-y-1 cursor-pointer shrink-0 text-center"
           >
             <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#1A1233] border border-purple-500/30 flex items-center justify-center text-zinc-300 font-medium text-xs hover:border-purple-400 transition-colors">
-              +3
+              +{Math.max(1, availableUsers.length - 5 || 3)}
             </div>
             <span className="text-xs font-medium text-zinc-400">
               Ver mais
@@ -533,7 +476,7 @@ const ModoAgora = () => {
             <span>Rolês acontecendo agora</span>
           </h2>
           <button 
-            onClick={() => setShowCreateActivityModal(true)}
+            onClick={() => setShowAllActivitiesModal(true)}
             className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
           >
             Ver todos
@@ -616,7 +559,7 @@ const ModoAgora = () => {
             Pessoas no Radar
           </h2>
           <button 
-            onClick={() => setShowFilterModal(true)}
+            onClick={() => setShowAllUsersModal(true)}
             className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
           >
             Ver todas
@@ -676,18 +619,18 @@ const ModoAgora = () => {
                     </div>
 
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleConnectUser(person.id);
                       }}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                        isLiked
-                          ? 'bg-pink-600 text-white shadow-md'
-                          : 'bg-purple-600/80 hover:bg-purple-600 text-white shadow-md active:scale-90'
+                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all ${
+                        isLiked 
+                          ? 'bg-pink-600 border-pink-500 text-white shadow-[0_0_10px_rgba(255,43,133,0.5)]' 
+                          : 'bg-black/50 border-white/20 text-purple-300 hover:text-white hover:bg-pink-600 hover:border-pink-500'
                       }`}
-                      title="Conectar"
                     >
-                      <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-white' : 'fill-white/80'}`} />
+                      <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-white' : ''}`} />
                     </button>
                   </div>
                 </div>
@@ -698,9 +641,9 @@ const ModoAgora = () => {
       </div>
 
       {/* 6. SECTION 4: CALL TO ACTION BANNER */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#170E2F] via-[#130B26] to-[#1F0E38] border border-purple-500/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+      <div className="p-4 rounded-3xl bg-gradient-to-r from-[#170E32] to-[#120B26] border border-purple-500/25 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+        <div className="flex items-center gap-3 text-center sm:text-left">
+          <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
             <Users className="w-5 h-5" />
           </div>
           <div>
@@ -762,6 +705,39 @@ const ModoAgora = () => {
           triggerToast('⚡ Rolê criado com sucesso e publicado no Radar!');
           fetchRadarData();
         }}
+      />
+
+      <AllActivitiesModal
+        show={showAllActivitiesModal}
+        onClose={() => setShowAllActivitiesModal(false)}
+        activities={activitiesList}
+        onJoinActivity={handleJoinActivity}
+        onOpenCreate={() => setShowCreateActivityModal(true)}
+        userCity={userDetectedCity}
+      />
+
+      <AllAvailableUsersModal
+        show={showAllUsersModal}
+        onClose={() => setShowAllUsersModal(false)}
+        users={availableUsers}
+        onSelectUser={(u) => setSelectedProfileModal(u)}
+        onLikeUser={handleConnectUser}
+        likedUserIds={likedUserIds}
+        onOpenFilter={() => setShowFilterModal(true)}
+        userCity={userDetectedCity}
+      />
+
+      <MyActivitiesModal
+        show={showMyActivitiesModal}
+        onClose={() => setShowMyActivitiesModal(false)}
+        createdActivities={myCreatedActivities}
+        requestedActivities={myRequestedActivities}
+        currentUserId={user?.id}
+        onCancelActivity={handleCancelActivity}
+        onApproveCandidate={handleApproveCandidate}
+        onRejectCandidate={handleRejectCandidate}
+        onOpenChat={handleOpenChat}
+        onOpenCreateModal={() => setShowCreateActivityModal(true)}
       />
 
     </div>
