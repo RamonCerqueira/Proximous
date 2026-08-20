@@ -20,6 +20,7 @@ const NowRadarBar = ({
   onRadiusChange,
   onOpenAvailability,
   onOpenCreateActivity,
+  onOpenCreateActivityModal,
   onDeactivateRadar,
   totalNearbyCount = 0,
 }) => {
@@ -119,7 +120,7 @@ const NowRadarBar = ({
 
           {/* Primary Action Button: Create Event */}
           <button
-            onClick={onOpenCreateActivityModal}
+            onClick={onOpenCreateActivityModal || onOpenCreateActivity}
             className="flex-1 sm:flex-none bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] hover:opacity-95 text-white font-black text-xs sm:text-sm py-2.5 sm:py-3 px-4 sm:px-5 rounded-2xl shadow-[0_0_20px_rgba(212,20,168,0.4)] flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus className="h-4 w-4" />
