@@ -1,0 +1,22 @@
+# Python backend .gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.db
+*.sqlite
+*.sqlite3
+src/database/app.db
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.env
+.env.local

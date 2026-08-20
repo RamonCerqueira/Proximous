@@ -1,0 +1,176 @@
+# =============================================================================
+# Root .gitignore for Proximous Project (Web, Backend, Mobile, Tools)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Ambientes Virtuais e Dependências Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.eggs/
+*.egg-info/
+*.egg
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.manifest
+*.spec
+
+# -----------------------------------------------------------------------------
+# 2. Dependências Node.js / Javascript / Frontend (Web & Mobile)
+# -----------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Builds e bundles gerados
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.out/
+.cache/
+.vite/
+.parcel-cache/
+*.tsbuildinfo
+.eslintcache
+
+# -----------------------------------------------------------------------------
+# 3. Mobile / React Native / Expo / Android / iOS
+# -----------------------------------------------------------------------------
+.expo/
+.expo-shared/
+web-build/
+expo-env.d.ts
+.kotlin/
+.gradle/
+android/app/build/
+android/.gradle/
+android/build/
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.apk
+*.aab
+*.ipa
+.metro-health-check*
+
+# -----------------------------------------------------------------------------
+# 4. Bancos de Dados Locais e Arquivos de Estado
+# -----------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+app.db
+*/database/app.db
+dump.rdb
+*.sql.gz
+*.dump
+
+# -----------------------------------------------------------------------------
+# 5. Testes, Cobertura e Arquivos Temporários de Teste
+# -----------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+.coveragerc
+coverage/
+htmlcov/
+*.cover
+*.py,cover
+.tox/
+.nox/
+.hypothesis/
+test-results/
+junit.xml
+playwright-report/
+cypress/videos/
+cypress/screenshots/
+.nyc_output/
+*.test.log
+
+# -----------------------------------------------------------------------------
+# 6. Variáveis de Ambiente e Segredos (Mantenha .env.example público)
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.cert
+*.crt
+*.key
+secrets.json
+serviceAccountKey.json
+id_rsa
+id_rsa.pub
+
+# -----------------------------------------------------------------------------
+# 7. IDEs, Editores de Código e Sistema Operacional
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# -----------------------------------------------------------------------------
+# 8. Agentes, Scratch e Logs
+# -----------------------------------------------------------------------------
+.agent/
+scratch/
+*.log
+*.tmp
+*.temp
+*.bak
