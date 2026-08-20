@@ -29,6 +29,56 @@ import NearbyMap from '@/components/NearbyMap';
 import { usersAPI, matchingAPI, activitiesAPI } from '@/lib/api';
 import { getUserInitials, generateAvatarUrl, formatDistance } from '@/lib/auth';
 
+const getActivityBadge = (cat, title) => {
+  const text = `${cat || ''} ${title || ''}`.toLowerCase();
+  if (text.includes('café') || text.includes('cafe') || text.includes('coffee')) {
+    return {
+      label: 'Café & Papo',
+      icon: '☕',
+      badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+      glow: 'from-amber-500/20'
+    };
+  }
+  if (text.includes('drink') || text.includes('bar') || text.includes('rooftop') || text.includes('cerveja')) {
+    return {
+      label: 'Drinks & Bar',
+      icon: '🍸',
+      badgeClass: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
+      glow: 'from-pink-500/20'
+    };
+  }
+  if (text.includes('beach') || text.includes('tennis') || text.includes('esporte') || text.includes('treino') || text.includes('sport')) {
+    return {
+      label: 'Beach Tennis',
+      icon: '🎾',
+      badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+      glow: 'from-emerald-500/20'
+    };
+  }
+  if (text.includes('farol') || text.includes('sunset') || text.includes('pôr do sol') || text.includes('praia')) {
+    return {
+      label: 'Sunset & Vista',
+      icon: '🌅',
+      badgeClass: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+      glow: 'from-orange-500/20'
+    };
+  }
+  if (text.includes('cinema') || text.includes('filme') || text.includes('show')) {
+    return {
+      label: 'Cinema & Arte',
+      icon: '🍿',
+      badgeClass: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
+      glow: 'from-violet-500/20'
+    };
+  }
+  return {
+    label: cat || 'Rolê Agora',
+    icon: '⚡',
+    badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    glow: 'from-purple-500/20'
+  };
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [nearbyUsers, setNearbyUsers] = useState([]);
