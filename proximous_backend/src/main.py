@@ -193,6 +193,26 @@ def sync_database_schema():
     except Exception as e:
         print(f"Schema Sync error: {e}")
 
+# Background Worker for Expired Messages Cleanup (Runs every 12 hours)
+def start_expired_messages_cleaner(app_instance):
+    import time
+    import threading
+    def worker():
+        while True:
+            try:
+                time.sleep(43200) # 12 hours
+                with app_instance.app_context():
+                    from src.models.user import Message
+                    expired = Message.query.filter(Message.expires_at <= datetime.utcnow()).all()
+                    if expired:
+                        for m in expired:
+                            db.session.delete(m)
+                        db.session.commit()
+                        print(f"🧹 Cleaner: Removidas {len(expired)} mensagens expiradas.")
+            except Exception as e:
+                print(f"Cleaner worker error: {e}")
+    threading.Thread(target=worker, daemon=True).start()
+
 # Create database tables
 with app.app_context():
     from src.models.user import User, EmpathyTransaction
@@ -415,25 +435,6 @@ with app.app_context():
     # Start cleaner thread
     start_expired_messages_cleaner(app)
 
-# Background Worker for Expired Messages Cleanup (Runs every 12 hours)
-def start_expired_messages_cleaner(app_instance):
-    import time
-    import threading
-    def worker():
-        while True:
-            try:
-                time.sleep(43200) # 12 hours
-                with app_instance.app_context():
-                    from src.models.user import Message
-                    expired = Message.query.filter(Message.expires_at <= datetime.utcnow()).all()
-                    if expired:
-                        for m in expired:
-                            db.session.delete(m)
-                        db.session.commit()
-                        print(f"🧹 Cleaner: Removidas {len(expired)} mensagens expiradas.")
-            except Exception as e:
-                print(f"Cleaner worker error: {e}")
-    threading.Thread(target=worker, daemon=True).start()
 
 # Error handlers
 @app.errorhandler(404)
