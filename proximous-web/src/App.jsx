@@ -21,9 +21,11 @@ import Contact from './pages/Contact';
 import Advertising from './pages/Advertising';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import PublicProfile from './pages/PublicProfile';
+import Search from './pages/Search';
+import Achievements from './pages/Achievements';
 
 // Admin Pages
-
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -39,6 +41,29 @@ const LoadingScreen = () => (
     </div>
   </div>
 );
+
+// Admin Protected Route — checks for admin JWT claim
+const AdminProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('proximous_token');
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  try {
+    // Decode payload (no signature verify — server does that)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.type !== 'admin') {
+      return <Navigate to="/admin/login" replace />;
+    }
+    // Check expiration
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem('proximous_token');
+      return <Navigate to="/admin/login" replace />;
+    }
+  } catch {
+    return <Navigate to="/admin/login" replace />;
+  }
+  return children;
+};
 
 // App Routes component
 const AppRoutes = () => {
@@ -143,6 +168,39 @@ const AppRoutes = () => {
         } 
       />
 
+      <Route 
+        path="/profile/:userId" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PublicProfile />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/search" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Search />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/achievements" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Achievements />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
       <Route
         path="/premium"
         element={
@@ -223,10 +281,10 @@ const AppRoutes = () => {
 
       {/* Admin Routes */}
       <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/users" element={<AdminUsers />} />
-      <Route path="/admin/moderation" element={<AdminModeration />} />
-      <Route path="/admin/settings" element={<AdminSettings />} />
+      <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+      <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+      <Route path="/admin/moderation" element={<AdminProtectedRoute><AdminModeration /></AdminProtectedRoute>} />
+      <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
 
       {/* Catch all route - MUST BE AT THE VERY END */}

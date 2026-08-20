@@ -46,11 +46,20 @@ export const ThemeProvider = ({ children }) => {
   const setTheme = (newTheme) => {
     if (newTheme === 'luxury-dark' || newTheme === 'luxury-light') {
       setThemeState(newTheme);
+      try {
+        const token = localStorage.getItem('proximous_token');
+        if (token) {
+          import('../lib/api').then(({ usersAPI }) => {
+            usersAPI.updateProfile({ theme_preference: newTheme === 'luxury-light' ? 'light' : 'dark' }).catch(() => {});
+          });
+        }
+      } catch (e) {}
     }
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'luxury-dark' ? 'luxury-light' : 'luxury-dark'));
+    const next = theme === 'luxury-dark' ? 'luxury-light' : 'luxury-dark';
+    setTheme(next);
   };
 
   const isDark = theme === 'luxury-dark';

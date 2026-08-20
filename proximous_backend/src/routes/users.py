@@ -672,3 +672,60 @@ def get_empathy_history():
         return jsonify({'error': 'Failed to fetch empathy history', 'details': str(e)}), 500
 
 
+@users_bp.route('/search', methods=['GET'])
+@jwt_required()
+def search_users():
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        q = request.args.get('q', '').strip()
+        interest_filter = request.args.get('interest', '').strip()
+        social_style = request.args.get('social_style', '').strip()
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+        query = User.query.filter(
+            User.id != current_user_id,
+            User.is_active == True,
+            User.is_visible == True
+        )
+
+        if q:
+            query = query.filter(User.name.ilike(f"%{q}%"))
+        
+        if interest_filter:
+            query = query.filter(User.interests.ilike(f"%{interest_filter}%"))
+            
+        if social_style:
+            query = query.filter(User.social_style == social_style)
+
+        paginated = query.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+        users_list = []
+        for u in paginated.items:
+            u_dict = u.to_dict()
+            if current_user:
+                u_dict['compatibility_score'] = current_user.calculate_compatibility_score(u)
+                if current_user.latitude and current_user.longitude and u.latitude and u.longitude:
+                    dist = calculate_distance(current_user.latitude, current_user.longitude, u.latitude, u.longitude)
+                    u_dict['distance'] = round(dist, 1)
+                    u_dict['distance_formatted'] = User.format_distance_range(dist)
+            users_list.append(u_dict)
+
+        return jsonify({
+            'users': users_list,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': paginated.total,
+                'pages': paginated.pages,
+                'has_next': paginated.has_next,
+                'has_prev': paginated.has_prev
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'error': 'Search failed', 'details': str(e)}), 500
+
+
+

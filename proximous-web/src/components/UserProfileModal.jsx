@@ -135,19 +135,32 @@ const UserProfileModal = ({ user, isOpen, onClose, onLike }) => {
           </div>
 
           {/* Bottom Action Footer */}
-          <div className="p-4 border-t border-border/60 bg-card/40 flex gap-2">
+          <div className="p-4 border-t border-border/60 bg-card/40 space-y-2">
+            <div className="flex gap-2">
+              <Button
+                onClick={handleStartChat}
+                variant="outline"
+                className="flex-1 rounded-2xl border-border/80 text-purple-400 hover:text-purple-300 font-bold text-xs py-3"
+              >
+                <MessageCircle className="h-4 w-4 mr-1.5" /> Mensagem
+              </Button>
+              <Button
+                onClick={onLike}
+                className="flex-1 proximous-button-primary rounded-2xl text-white font-black text-xs py-3 shadow-lg"
+              >
+                <Heart className="h-4 w-4 mr-1.5 fill-white" /> Conectar
+              </Button>
+            </div>
+
             <Button
-              onClick={handleStartChat}
-              variant="outline"
-              className="flex-1 rounded-2xl border-border/80 text-purple-400 hover:text-purple-300 font-bold text-xs py-3"
+              onClick={() => {
+                onClose();
+                navigate(`/profile/${user.id}`);
+              }}
+              variant="ghost"
+              className="w-full text-xs font-extrabold text-purple-300 hover:text-white hover:bg-purple-500/10 py-2 rounded-xl"
             >
-              <MessageCircle className="h-4 w-4 mr-1.5" /> Enviar Mensagem
-            </Button>
-            <Button
-              onClick={onLike}
-              className="flex-1 proximous-button-primary rounded-2xl text-white font-black text-xs py-3 shadow-lg"
-            >
-              <Heart className="h-4 w-4 mr-1.5 fill-white" /> Conectar Agora
+              Ver Perfil Completo & Fotos →
             </Button>
           </div>
         </motion.div>

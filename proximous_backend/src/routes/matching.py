@@ -142,12 +142,28 @@ def send_like():
                 f"Você e {current_user.name} se conectaram! Mandem um oi agora.",
                 {"type": "match", "match_id": match.id}
             )
-            send_expo_push_notification(
-                current_user_id,
-                match_title,
-                f"Você e {receiver.name} se conectaram! Mandem um oi agora.",
-                {"type": "match", "match_id": match.id}
-            )
+            # Emit Real-time Socket.IO new_match celebration to both users
+            try:
+                from src.main import socketio
+                if socketio:
+                    socketio.emit(
+                        'new_match',
+                        {
+                            'match_id': match.id,
+                            'other_user': current_user.to_dict()
+                        },
+                        to=f"user_{receiver_id}"
+                    )
+                    socketio.emit(
+                        'new_match',
+                        {
+                            'match_id': match.id,
+                            'other_user': receiver.to_dict()
+                        },
+                        to=f"user_{current_user_id}"
+                    )
+            except Exception as se:
+                print(f"Socket new_match emit error: {se}")
         else:
             if like_type == 'superlike':
                 notif_title = "⭐ SUPER LIKE RECEBIDO!"

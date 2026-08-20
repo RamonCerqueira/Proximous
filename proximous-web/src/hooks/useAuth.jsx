@@ -41,9 +41,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials);
-      const { user: userData, access_token } = response.data;
+      const { user: userData, access_token, refresh_token } = response.data;
       
       setToken(access_token);
+      if (refresh_token) localStorage.setItem('proximous_refresh_token', refresh_token);
       setUser(userData);
       setUserState(userData);
       setIsAuthenticated(true);
@@ -61,9 +62,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authAPI.register(userData);
-      const { user: newUser, access_token } = response.data;
+      const { user: newUser, access_token, refresh_token } = response.data;
       
       setToken(access_token);
+      if (refresh_token) localStorage.setItem('proximous_refresh_token', refresh_token);
       setUser(newUser);
       setUserState(newUser);
       setIsAuthenticated(true);
@@ -86,6 +88,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       removeToken();
       removeUser();
+      localStorage.removeItem('proximous_refresh_token');
       setUserState(null);
       setIsAuthenticated(false);
     }

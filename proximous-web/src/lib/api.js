@@ -26,15 +26,66 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle auth errors
+let _isRefreshing = false;
+let _failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  _failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  _failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('proximous_token');
-      localStorage.removeItem('proximous_user');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const refreshToken = localStorage.getItem('proximous_refresh_token');
+
+      if (!refreshToken) {
+        localStorage.removeItem('proximous_token');
+        localStorage.removeItem('proximous_user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      if (_isRefreshing) {
+        return new Promise((resolve, reject) => {
+          _failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      _isRefreshing = true;
+
+      try {
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+          headers: { Authorization: `Bearer ${refreshToken}` }
+        });
+        const newToken = res.data.access_token;
+        localStorage.setItem('proximous_token', newToken);
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+        processQueue(null, newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem('proximous_token');
+        localStorage.removeItem('proximous_refresh_token');
+        localStorage.removeItem('proximous_user');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        _isRefreshing = false;
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -66,6 +117,14 @@ export const usersAPI = {
   updateAvailability: (data) => api.put('/users/availability', data),
   deactivateAccount: (reason) => api.post('/users/deactivate', { reason }),
   getEmpathyHistory: () => api.get('/users/empathy-history'),
+  search: (params) => api.get('/users/search', { params }),
+};
+
+// Upload API
+export const uploadAPI = {
+  uploadPhoto: (formData) => api.post('/upload/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // Activities API (Modo AGORA)

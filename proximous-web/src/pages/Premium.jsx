@@ -67,7 +67,24 @@ const Premium = () => {
 
   const handleSubscribe = async (plan) => {
     setSelectedPlanForPix(plan);
-    setPixModalOpen(true);
+    try {
+      const planType = plan.plan_type || (plan.interval === 'annual' ? 'annual' : 'monthly');
+      const res = await subscriptionsAPI.subscribe({
+        plan_type: planType,
+        payment_method: 'credit_card',
+        coupon_code: discount ? couponCode : null
+      });
+
+      if (res.data?.checkout_url) {
+        window.location.href = res.data.checkout_url;
+        return;
+      }
+      // If no external gateway configured, show direct PIX modal
+      setPixModalOpen(true);
+    } catch (err) {
+      console.warn('Subscription checkout redirect notice:', err);
+      setPixModalOpen(true);
+    }
   };
 
   const handleCopyPixKey = () => {
@@ -77,18 +94,24 @@ const Premium = () => {
 
   const handleConfirmPixPayment = async () => {
     try {
+      const planType = selectedPlanForPix?.plan_type || (selectedPlanForPix?.interval === 'annual' ? 'annual' : 'monthly');
       const subscriptionData = {
-        plan_id: selectedPlanForPix.id,
+        plan_type: planType,
         coupon_code: discount ? couponCode : null,
         payment_method: 'pix'
       };
 
-      await subscriptionsAPI.subscribe(subscriptionData);
-      alert('Solicitação de pagamento PIX recebida! O plano VIP será ativado após compensação.');
+      const res = await subscriptionsAPI.subscribe(subscriptionData);
+      if (res.data?.checkout_url) {
+        window.location.href = res.data.checkout_url;
+        return;
+      }
+      alert('Solicitação de pagamento recebida! O plano VIP foi ativado com sucesso.');
       setPixModalOpen(false);
+      fetchSubscriptionData();
     } catch (error) {
       console.error('Subscription error:', error);
-      alert('Solicitação registrada! O plano VIP será ativado assim que confirmado.');
+      alert('Solicitação registrada! O plano VIP será confirmado em instantes.');
       setPixModalOpen(false);
     }
   };

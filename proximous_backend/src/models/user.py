@@ -61,6 +61,13 @@ class User(db.Model):
     daily_messages_sent = db.Column(db.Integer, default=0)
     last_activity_reset = db.Column(db.Date, default=datetime.utcnow().date())
     
+    # Password Reset
+    password_reset_token = db.Column(db.String(36), nullable=True, index=True)
+    password_reset_expires_at = db.Column(db.DateTime, nullable=True)
+
+    # Theme Preference
+    theme_preference = db.Column(db.String(10), default='dark')
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -304,6 +311,7 @@ class User(db.Model):
                 'daily_likes_used': self.daily_likes_used,
                 'daily_messages_sent': self.daily_messages_sent,
                 'push_token': self.push_token,
+                'theme_preference': self.theme_preference or 'dark',
                 'premium_expires_at': self.premium_expires_at.isoformat() if self.premium_expires_at else None
             })
         

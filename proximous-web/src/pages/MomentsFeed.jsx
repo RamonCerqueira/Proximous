@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { momentsAPI } from '../lib/api';
+import { momentsAPI, uploadAPI } from '../lib/api';
 import { EmojiStyle } from 'emoji-picker-react';
 import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
@@ -51,10 +51,14 @@ const MomentsFeed = () => {
 
   const [moments, setMoments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostPhoto, setNewPostPhoto] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
@@ -106,12 +110,14 @@ const MomentsFeed = () => {
   const fetchMoments = async () => {
     try {
       setLoading(true);
-      const res = await momentsAPI.getMoments();
+      setPage(1);
+      const res = await momentsAPI.getMoments({ page: 1, per_page: 10 });
       const loaded = res.data.moments || [];
       if (loaded.length === 0) {
         throw new Error('No moments returned from API');
       }
       setMoments(loaded);
+      setHasMore(res.data.page < res.data.pages);
     } catch (err) {
       console.warn('Using fallback moments:', err);
       const now = Date.now();
@@ -145,8 +151,31 @@ const MomentsFeed = () => {
           created_at: new Date(now - 120 * 60000).toISOString()
         }
       ]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreMoments = async () => {
+    if (loadingMore || !hasMore) return;
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const res = await momentsAPI.getMoments({ page: nextPage, per_page: 10 });
+      const newItems = res.data.moments || [];
+      if (newItems.length > 0) {
+        setMoments(prev => [...prev, ...newItems]);
+        setPage(nextPage);
+        setHasMore(res.data.page < res.data.pages);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.warn('Error loading more moments:', err);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -170,15 +199,30 @@ const MomentsFeed = () => {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Local preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result);
-        setNewPostPhoto(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Upload in background to get server/Cloudinary URL
+      try {
+        setUploadingImage(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await uploadAPI.uploadPhoto(formData);
+        if (res.data?.photo_url) {
+          setNewPostPhoto(res.data.photo_url);
+        }
+      } catch (err) {
+        console.warn('Upload error, using reader fallback:', err);
+      } finally {
+        setUploadingImage(false);
+      }
     }
   };
 
@@ -396,6 +440,26 @@ const MomentsFeed = () => {
                 )}
               </React.Fragment>
             ))}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="pt-4 text-center">
+                <button
+                  onClick={loadMoreMoments}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-2xl bg-card border border-border text-sm font-bold hover:bg-accent text-purple-300 hover:text-white transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Carregando mais...</span>
+                    </>
+                  ) : (
+                    <span>Carregar mais Momentos ↓</span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

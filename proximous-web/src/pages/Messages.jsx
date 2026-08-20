@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
+import { messagesAPI } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getSocket, initSocket } from '../lib/socket';
@@ -37,7 +37,7 @@ const Messages = () => {
       // Join real-time match room
       socket.emit('join_match_room', { match_id: matchId, user_id: user?.id });
 
-      // Handle real-time incoming messages
+      // Handle real-time incoming messages (corrected event name)
       const handleNewMessage = (msgData) => {
         if (
           msgData.sender_id === selectedConversation.id ||
@@ -52,19 +52,24 @@ const Messages = () => {
         }
       };
 
-      // Handle typing status updates
+      // Handle typing status updates (corrected event name)
       const handleUserTyping = (data) => {
         if (data.user_id === selectedConversation.id || data.match_id === matchId) {
           setIsOtherUserTyping(data.is_typing);
+          // Auto-clear typing indicator after 3s
+          if (data.is_typing) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = setTimeout(() => setIsOtherUserTyping(false), 3000);
+          }
         }
       };
 
-      socket.on('receive_message', handleNewMessage);
-      socket.on('user_typing_status', handleUserTyping);
+      socket.on('new_message_received', handleNewMessage);
+      socket.on('user_typing', handleUserTyping);
 
       return () => {
-        socket.off('receive_message', handleNewMessage);
-        socket.off('user_typing_status', handleUserTyping);
+        socket.off('new_message_received', handleNewMessage);
+        socket.off('user_typing', handleUserTyping);
       };
     }
   }, [selectedConversation, user]);
@@ -72,7 +77,7 @@ const Messages = () => {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/chats');
+      const res = await messagesAPI.getConversations();
       setConversations(res.data.conversations || []);
     } catch (err) {
       console.warn('Error loading conversations:', err);
@@ -83,11 +88,30 @@ const Messages = () => {
 
   const fetchMessages = async (userId) => {
     try {
-      const res = await api.get(`/chats/${userId}/messages`);
+      const res = await messagesAPI.getConversation(userId);
       setMessages(res.data.messages || []);
     } catch (err) {
       console.warn('Error loading messages:', err);
     }
+  };
+
+  // Emit typing indicator with debounce
+  const emitTyping = (isTyping) => {
+    const socket = getSocket();
+    if (!socket || !selectedConversation) return;
+    const matchId = selectedConversation.match_id || selectedConversation.id;
+    socket.emit('typing_indicator', {
+      match_id: matchId,
+      user_id: user?.id,
+      is_typing: isTyping
+    });
+  };
+
+  const handleTypingChange = (e) => {
+    setNewMessage(e.target.value);
+    emitTyping(true);
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => emitTyping(false), 2000);
   };
 
   const handleSendMessage = async (e) => {
@@ -97,13 +121,17 @@ const Messages = () => {
     const content = newMessage.trim();
     setNewMessage('');
     setSending(true);
+    emitTyping(false);
+    clearTimeout(typingTimeoutRef.current);
 
     try {
-      const res = await api.post(`/chats/${selectedConversation.id}/messages`, {
-        content
+      const res = await messagesAPI.sendMessage({
+        receiver_id: selectedConversation.id,
+        content,
+        match_id: selectedConversation.match_id || null
       });
 
-      const sentMsg = res.data.message || {
+      const sentMsg = res.data.message_data || {
         id: 'msg_' + Date.now(),
         sender_id: user?.id,
         receiver_id: selectedConversation.id,
@@ -112,11 +140,11 @@ const Messages = () => {
       };
 
       setMessages(prev => [...prev, sentMsg]);
-      
+
       // Emit via socket for instant delivery
       const socket = getSocket();
       if (socket) {
-        socket.emit('send_message', {
+        socket.emit('send_live_message', {
           ...sentMsg,
           match_id: selectedConversation.match_id || selectedConversation.id
         });
@@ -285,7 +313,7 @@ const Messages = () => {
               <input
                 type="text"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={handleTypingChange}
                 placeholder="Escreva uma mensagem..."
                 className="flex-1 bg-background border border-border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 text-foreground"
               />

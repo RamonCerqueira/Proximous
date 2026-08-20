@@ -79,6 +79,15 @@ def register():
         db.session.add(user)
         db.session.commit()
         
+        # Send welcome email in background thread
+        import threading
+        from src.utils.email import send_welcome_email
+        threading.Thread(
+            target=send_welcome_email,
+            args=(user.email, user.name),
+            daemon=True
+        ).start()
+        
         # Create tokens
         access_token = create_access_token(
             identity=user.id,
@@ -252,18 +261,24 @@ def forgot_password():
         email = data['email'].lower().strip()
         user = User.query.filter_by(email=email).first()
         
+        # Don't reveal if email exists or not for security
         if not user:
-            # Don't reveal if email exists or not for security
             return jsonify({'message': 'If the email exists, a reset link has been sent'}), 200
         
-        # Generate token and send email via Resend
+        # Generate token, save to DB with 1h expiration
         reset_token = str(uuid.uuid4())
+        user.password_reset_token = reset_token
+        user.password_reset_expires_at = datetime.utcnow() + timedelta(hours=1)
+        db.session.commit()
+
+        # Send email
         from src.utils.email import send_password_reset_email
         send_password_reset_email(email, reset_token)
 
         return jsonify({'message': 'If the email exists, a reset link has been sent'}), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': 'Password reset failed', 'details': str(e)}), 500
 
 @auth_bp.route('/reset-password', methods=['POST'])
@@ -276,17 +291,34 @@ def reset_password():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
         
-        # In production, validate the reset token
-        # For now, just validate password strength
+        token = data['token']
         new_password = data['new_password']
+
+        # Find user by reset token
+        user = User.query.filter_by(password_reset_token=token).first()
+        if not user:
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
+
+        # Check token expiration
+        if not user.password_reset_expires_at or user.password_reset_expires_at < datetime.utcnow():
+            return jsonify({'error': 'Reset token has expired. Please request a new one.'}), 400
+        
+        # Validate new password strength
         is_valid, message = validate_password(new_password)
         if not is_valid:
             return jsonify({'error': message}), 400
         
-        # In production, find user by token and update password
+        # Update password and clear token
+        user.set_password(new_password)
+        user.password_reset_token = None
+        user.password_reset_expires_at = None
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+        
         return jsonify({'message': 'Password reset successfully'}), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': 'Password reset failed', 'details': str(e)}), 500
 
 @auth_bp.route('/change-password', methods=['POST'])

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import api, { usersAPI } from '../lib/api';
+import api, { usersAPI, uploadAPI } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -348,7 +348,7 @@ const Profile = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     setPhotoError('');
     const file = e.target.files?.[0];
     if (!file) return;
@@ -358,18 +358,24 @@ const Profile = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result;
-      if (dataUrl) {
-        const updated = [...formData.photos, dataUrl];
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      
+      const res = await uploadAPI.uploadPhoto(uploadData);
+      const photoUrl = res.data?.photo_url;
+
+      if (photoUrl) {
+        const updated = [...formData.photos, photoUrl];
         setFormData(prev => ({ ...prev, photos: updated }));
         setProfile(prev => prev ? { ...prev, photos: updated, profile_photo_url: updated[0] } : prev);
         setShowPhotoModal(false);
-        usersAPI.addPhoto(dataUrl).catch(err => console.warn('Sync upload photo notice:', err));
+        usersAPI.addPhoto(photoUrl).catch(err => console.warn('Sync upload photo notice:', err));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setPhotoError('Falha no upload da foto. Verifique o formato e tente novamente.');
+    }
   };
 
   const handleSelectPreset = (presetUrl) => {

@@ -29,6 +29,7 @@ from src.routes.admin import admin_bp
 from src.routes.support import support_bp
 from src.routes.activities import activities_bp
 from src.routes.notifications import notifications_bp
+from src.routes.upload import upload_bp
 
 
 
@@ -67,7 +68,9 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # CORS configuration
-CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"])
+allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:5174')
+allowed_origins = [o.strip() for o in allowed_origins_env.split(',')]
+CORS(app, origins=allowed_origins, allow_headers=["Content-Type", "Authorization"])
 
 # SocketIO configuration
 try:
@@ -98,6 +101,7 @@ app.register_blueprint(admin_bp, url_prefix='/api/admin')
 app.register_blueprint(support_bp, url_prefix='/api/support')
 app.register_blueprint(activities_bp, url_prefix='/api/activities')
 app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+app.register_blueprint(upload_bp, url_prefix='/api/upload')
 
 
 
@@ -140,6 +144,12 @@ def sync_database_schema():
                 queries.append("ALTER TABLE users ADD COLUMN daily_messages_sent INTEGER DEFAULT 0")
             if 'last_activity_reset' not in existing_columns:
                 queries.append("ALTER TABLE users ADD COLUMN last_activity_reset DATE")
+            if 'password_reset_token' not in existing_columns:
+                queries.append("ALTER TABLE users ADD COLUMN password_reset_token VARCHAR(36)")
+            if 'password_reset_expires_at' not in existing_columns:
+                queries.append("ALTER TABLE users ADD COLUMN password_reset_expires_at TIMESTAMP")
+            if 'theme_preference' not in existing_columns:
+                queries.append("ALTER TABLE users ADD COLUMN theme_preference VARCHAR(10) DEFAULT 'dark'")
 
             for query in queries:
                 try:
@@ -193,15 +203,20 @@ with app.app_context():
     from src.models.admin import Admin
     admin = Admin.query.filter_by(email='admin@proximous.com').first()
     if not admin:
+        import secrets
+        default_password = os.environ.get('ADMIN_DEFAULT_PASSWORD', secrets.token_urlsafe(16))
         admin = Admin(
             email='admin@proximous.com',
             name='Administrador Principal',
             role='super_admin'
         )
-        admin.set_password('admin123')  # Change this in production
+        admin.set_password(default_password)
         db.session.add(admin)
         db.session.commit()
-        print("Default admin user created: admin@proximous.com / admin123")
+        if os.environ.get('FLASK_DEBUG', 'True').lower() in ('true', '1'):
+            print(f"Default admin created: admin@proximous.com / {default_password}")
+        else:
+            print("Default admin user created. Password set from ADMIN_DEFAULT_PASSWORD env var.")
     
     # Create default test users if they don't exist
     from src.models.user import User
@@ -396,6 +411,29 @@ with app.app_context():
     
     db.session.commit()
     print("Default FAQs created")
+    
+    # Start cleaner thread
+    start_expired_messages_cleaner(app)
+
+# Background Worker for Expired Messages Cleanup (Runs every 12 hours)
+def start_expired_messages_cleaner(app_instance):
+    import time
+    import threading
+    def worker():
+        while True:
+            try:
+                time.sleep(43200) # 12 hours
+                with app_instance.app_context():
+                    from src.models.user import Message
+                    expired = Message.query.filter(Message.expires_at <= datetime.utcnow()).all()
+                    if expired:
+                        for m in expired:
+                            db.session.delete(m)
+                        db.session.commit()
+                        print(f"🧹 Cleaner: Removidas {len(expired)} mensagens expiradas.")
+            except Exception as e:
+                print(f"Cleaner worker error: {e}")
+    threading.Thread(target=worker, daemon=True).start()
 
 # Error handlers
 @app.errorhandler(404)

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,9 @@ import {
 } from 'lucide-react';
 import { getUserInitials, generateAvatarUrl } from '../lib/auth';
 import NotificationsDrawer from './NotificationsDrawer';
+import MatchCelebrationModal from './MatchCelebrationModal';
+import { initSocket, getSocket } from '../lib/socket';
+import { usersAPI } from '../lib/api';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -44,6 +47,59 @@ const Layout = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [matchCelebration, setMatchCelebration] = useState(null); // { otherUser }
+  const geoWatchRef = useRef(null);
+  const lastGeoUpdateRef = useRef(0);
+
+  // Connect Socket.IO and join personal notification room
+  useEffect(() => {
+    if (!user?.id) return;
+    const socket = initSocket();
+
+    socket.emit('authenticate', { user_id: user.id });
+
+    const handleNotification = (notif) => {
+      setUnreadCount(prev => prev + 1);
+    };
+
+    const handleNewMatch = (data) => {
+      setMatchCelebration(data);
+    };
+
+    socket.on('notification_received', handleNotification);
+    socket.on('new_match', handleNewMatch);
+
+    return () => {
+      socket.off('notification_received', handleNotification);
+      socket.off('new_match', handleNewMatch);
+    };
+  }, [user?.id]);
+
+  // Continuous geolocation — update at most every 5 minutes
+  useEffect(() => {
+    if (!user?.id || !navigator.geolocation) return;
+    const GEO_INTERVAL_MS = 5 * 60 * 1000;
+
+    geoWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - lastGeoUpdateRef.current < GEO_INTERVAL_MS) return;
+        lastGeoUpdateRef.current = now;
+        usersAPI.updateProfile({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude
+        }).catch(() => {});
+      },
+      () => {}, // silently ignore permission denied
+      { enableHighAccuracy: false, maximumAge: GEO_INTERVAL_MS }
+    );
+
+    return () => {
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+      }
+    };
+  }, [user?.id]);
 
   const isActive = (path) => location.pathname === path;
 
@@ -291,6 +347,11 @@ const Layout = ({ children }) => {
           </nav>
         </div>
       </div>
+
+      <MatchCelebrationModal
+        matchData={matchCelebration}
+        onClose={() => setMatchCelebration(null)}
+      />
 
       <NotificationsDrawer
         isOpen={notifDrawerOpen}

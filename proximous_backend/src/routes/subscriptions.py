@@ -135,20 +135,116 @@ def create_subscription():
         if coupon_code and coupon:
             coupon.use_coupon(current_user_id)
         
-        # In production, integrate with actual payment processors
-        # For now, we'll simulate successful payment
-        payment.mark_completed()
-        
+        # Mercado Pago integration
+        checkout_url = None
+        preference_id = None
+        mp_access_token = os.environ.get('MP_ACCESS_TOKEN')
+
+        if mp_access_token:
+            try:
+                import urllib.request
+                import json
+                frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+                backend_url = os.environ.get('BACKEND_PUBLIC_URL', 'http://localhost:5001')
+
+                mp_url = "https://api.mercadopago.com/checkout/preferences"
+                mp_payload = {
+                    "items": [
+                        {
+                            "title": f"Proximous VIP - {plan.name}",
+                            "quantity": 1,
+                            "currency_id": "BRL",
+                            "unit_price": float(amount)
+                        }
+                    ],
+                    "payer": {
+                        "email": user.email,
+                        "name": user.name
+                    },
+                    "back_urls": {
+                        "success": f"{frontend_url}/premium?status=success",
+                        "failure": f"{frontend_url}/premium?status=failure",
+                        "pending": f"{frontend_url}/premium?status=pending"
+                    },
+                    "auto_return": "approved",
+                    "notification_url": f"{backend_url}/api/subscriptions/webhook",
+                    "external_reference": f"{subscription.id}"
+                }
+
+                req = urllib.request.Request(
+                    mp_url,
+                    data=json.dumps(mp_payload).encode('utf-8'),
+                    headers={
+                        "Authorization": f"Bearer {mp_access_token}",
+                        "Content-Type": "application/json"
+                    },
+                    method="POST"
+                )
+
+                with urllib.request.urlopen(req) as resp:
+                    resp_data = json.loads(resp.read().decode('utf-8'))
+                    checkout_url = resp_data.get('init_point')
+                    preference_id = resp_data.get('id')
+                    payment.transaction_id = preference_id
+                    db.session.commit()
+            except Exception as mpe:
+                print(f"Mercado Pago preference error ({mpe}), proceeding in fallback mode.")
+        else:
+            # Fallback simulator mode when no MP_ACCESS_TOKEN is set
+            payment.mark_completed()
+
         return jsonify({
             'message': 'Subscription created successfully',
             'subscription': subscription.to_dict(),
             'payment': payment.to_dict(),
+            'checkout_url': checkout_url,
+            'preference_id': preference_id,
             'pix_key': '03207834566'
         }), 201
         
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to create subscription', 'details': str(e)}), 500
+
+
+@subscriptions_bp.route('/webhook', methods=['POST'])
+def mercadopago_webhook():
+    """
+    Webhook handler for Mercado Pago payment status updates.
+    """
+    try:
+        data = request.get_json() or {}
+        topic = request.args.get('topic') or data.get('type')
+        payment_id = request.args.get('id') or data.get('data', {}).get('id')
+
+        if topic == 'payment' and payment_id:
+            mp_access_token = os.environ.get('MP_ACCESS_TOKEN')
+            if mp_access_token:
+                import urllib.request
+                import json
+                req = urllib.request.Request(
+                    f"https://api.mercadopago.com/v1/payments/{payment_id}",
+                    headers={"Authorization": f"Bearer {mp_access_token}"}
+                )
+                with urllib.request.urlopen(req) as resp:
+                    payment_info = json.loads(resp.read().decode('utf-8'))
+                    status = payment_info.get('status')
+                    sub_id = payment_info.get('external_reference')
+
+                    if sub_id:
+                        sub = Subscription.query.get(sub_id)
+                        if sub and status == 'approved':
+                            sub.status = 'active'
+                            user = User.query.get(sub.user_id)
+                            if user:
+                                user.is_premium = True
+                                user.premium_expires_at = sub.billing_cycle_end
+                            db.session.commit()
+
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return jsonify({'status': 'error', 'details': str(e)}), 200
 
 @subscriptions_bp.route('/cancel', methods=['POST'])
 @jwt_required()

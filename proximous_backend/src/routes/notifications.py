@@ -43,7 +43,7 @@ def mark_single_read(notification_id):
 
 
 def create_notification(user_id, title, message, notif_type='system', actor_id=None):
-    """Helper utility to persist real notifications into the database"""
+    """Helper utility to persist real notifications into the database and emit via Socket.IO"""
     try:
         notif = Notification(
             user_id=user_id,
@@ -55,6 +55,19 @@ def create_notification(user_id, title, message, notif_type='system', actor_id=N
         )
         db.session.add(notif)
         db.session.commit()
+
+        # Emit real-time notification via Socket.IO
+        try:
+            from src.main import socketio
+            if socketio:
+                socketio.emit(
+                    'notification_received',
+                    notif.to_dict(),
+                    to=f"user_{user_id}"
+                )
+        except Exception as se:
+            print(f"Socket notification emit notice: {se}")
+
         return notif
     except Exception as e:
         db.session.rollback()
