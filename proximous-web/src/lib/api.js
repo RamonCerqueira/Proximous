@@ -115,6 +115,7 @@ export const usersAPI = {
   getAchievements: () => api.get('/users/achievements'),
   updatePrivacySettings: (data) => api.put('/users/privacy-settings', data),
   updateAvailability: (data) => api.put('/users/availability', data),
+  setAvailability: (data) => api.put('/users/availability', data), // alias usado no ModoAgora
   deactivateAccount: (reason) => api.post('/users/deactivate', { reason }),
   getEmpathyHistory: () => api.get('/users/empathy-history'),
   search: (params) => api.get('/users/search', { params }),

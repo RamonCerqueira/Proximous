@@ -15,7 +15,7 @@ const PrivacyCard = () => {
           <h4 className="font-extrabold text-sm text-white">Conexões seguras</h4>
           <p className="text-xs text-[#AAA5BA] font-medium">Só você decide com quem quer conversar.</p>
           <button 
-            onClick={() => navigate('/privacy')} 
+            onClick={() => navigate('/settings')} 
             className="text-xs font-bold text-purple-400 hover:underline mt-0.5 block"
           >
             Saiba mais sobre privacidade →

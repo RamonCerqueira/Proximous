@@ -179,7 +179,7 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
   const [selectedRadius, setSelectedRadius] = useState(radius);
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'people' | 'events' | 'coffee'
 
-  const defaultLocation = [-23.5505, -46.6333];
+  const defaultLocation = [-12.9714, -38.5014]; // Salvador, BA
   const [myLocation, setMyLocation] = useState(defaultLocation);
   const [gpsStatus, setGpsStatus] = useState('locating');
 
@@ -256,9 +256,9 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
   const defaultEvents = [
     {
       id: 'map-evt-1',
-      title: '☕ Tomando café no Centro',
+      title: '☕ Tomando café no Pelourinho',
       category: 'coffee',
-      location_name: 'Pinheiros, SP',
+      location_name: 'Pelourinho, Salvador',
       scheduled_time: 'Hoje às 17:30',
       latitude: lat + 0.003,
       longitude: lng + 0.004,
@@ -267,10 +267,10 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
     },
     {
       id: 'map-evt-2',
-      title: '🏃 Caminhada no Parque',
+      title: '🏃 Caminhada na Orla de Ondina',
       category: 'sports',
-      location_name: 'Parque Ibirapuera',
-      scheduled_time: 'Amanhã às 09:00',
+      location_name: 'Orla de Ondina, Salvador',
+      scheduled_time: 'Amanhã às 07:00',
       latitude: lat - 0.004,
       longitude: lng - 0.003,
       participant_count: 2,
@@ -281,23 +281,23 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
   const defaultUsers = [
     {
       id: 'map-u1',
-      name: 'Mariana',
-      age: 24,
+      name: 'Larissa',
+      age: 23,
       gender: 'female',
       profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200',
       latitude: lat + 0.002,
       longitude: lng - 0.003,
-      bio: 'Adoro conversas tranquilas e cafés acolhedores.'
+      bio: 'Amo o bairro do Barra e o pôr do sol na Barra.'
     },
     {
       id: 'map-u2',
-      name: 'Lucas',
-      age: 27,
+      name: 'Mateus',
+      age: 26,
       gender: 'male',
       profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
       latitude: lat - 0.003,
       longitude: lng + 0.005,
-      bio: 'Fotografia urbana e caminhadas no fim de tarde.'
+      bio: 'Fotografia urbana e passeios no Rio Vermelho.'
     }
   ];
 

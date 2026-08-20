@@ -136,7 +136,7 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Relatórios e Analytics</h2>
           <p className="text-gray-600 mb-4">Acesse relatórios detalhados e análises de dados da plataforma.</p>
           <button
-            onClick={() => navigate('/admin/analytics')}
+            onClick={() => { alert('Módulo Analytics em breve!'); navigate('/admin/dashboard'); }}
             className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
           >
             Ver Relatórios
@@ -148,7 +148,7 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Suporte e Tickets</h2>
           <p className="text-gray-600 mb-4">Gerencie tickets de suporte e forneça assistência aos usuários.</p>
           <button
-            onClick={() => navigate('/admin/support')}
+            onClick={() => navigate('/contact')}
             className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
           >
             Gerenciar Tickets

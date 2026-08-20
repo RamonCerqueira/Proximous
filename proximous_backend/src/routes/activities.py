@@ -281,8 +281,8 @@ def create_activity():
         if not data or not data.get('title') or not data.get('category'):
             return jsonify({'error': 'Title and category are required'}), 400
             
-        lat = data.get('latitude', current_user.latitude or -23.5505)
-        lng = data.get('longitude', current_user.longitude or -46.6333)
+        lat = data.get('latitude', current_user.latitude or -12.9714)
+        lng = data.get('longitude', current_user.longitude or -38.5014)
         
         duration_hours = int(data.get('duration_hours', 8))
         expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
@@ -293,7 +293,7 @@ def create_activity():
             title=data.get('title'),
             description=data.get('description', ''),
             photo_url=data.get('photo_url'),
-            location_name=data.get('location_name', current_user.location_city or 'São Paulo, SP'),
+            location_name=data.get('location_name', current_user.location_city or 'Salvador, BA'),
             scheduled_time=data.get('scheduled_time', 'Hoje mais tarde'),
             latitude=lat,
             longitude=lng,

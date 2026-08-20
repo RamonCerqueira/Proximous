@@ -60,9 +60,9 @@ const ModoAgoraHub = ({
   const fetchMyActivities = async () => {
     try {
       const res = await activitiesAPI.getMyActivities();
-      const list = res.data.activities || [];
-      const createdByMe = list.filter(a => a.user_id === user?.id);
-      setMyCreatedActivities(createdByMe);
+      // Backend returns { created_activities, requested_activities } or legacy { activities }
+      const created = res.data.created_activities || res.data.activities || [];
+      setMyCreatedActivities(created);
     } catch (err) {
       console.warn('Error fetching my activities:', err);
     }

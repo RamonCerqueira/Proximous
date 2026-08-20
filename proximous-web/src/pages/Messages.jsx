@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { messagesAPI } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,6 +9,7 @@ import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
 const Messages = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -24,6 +26,16 @@ const Messages = () => {
     initSocket();
     fetchConversations();
   }, []);
+
+  // Auto-select conversation when navigated from another page (e.g., ModoAgora chat button)
+  useEffect(() => {
+    const targetUserId = location.state?.targetUserId;
+    if (!targetUserId || conversations.length === 0) return;
+    const match = conversations.find(
+      (c) => String(c.id) === String(targetUserId) || String(c.user_id) === String(targetUserId)
+    );
+    if (match) setSelectedConversation(match);
+  }, [conversations, location.state]);
 
   // Handle room joining and real-time listeners on active conversation change
   useEffect(() => {

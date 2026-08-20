@@ -260,7 +260,7 @@ const ModoAgora = () => {
   };
 
   const handleOpenChat = (targetUserId) => {
-    navigate(`/messages?userId=${targetUserId}`);
+    navigate('/messages', { state: { targetUserId } });
   };
 
   const handleJoinActivity = async (actId) => {
