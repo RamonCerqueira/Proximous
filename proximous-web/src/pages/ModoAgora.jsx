@@ -4,58 +4,42 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.jsx';
 import { usersAPI, activitiesAPI, matchingAPI } from '@/lib/api';
 import { 
-  Radio, 
+  Bell,
+  Flame,
+  MapPin, 
   SlidersHorizontal, 
   Sparkles, 
-  Users, 
-  PartyPopper, 
   Plus, 
-  MapPin, 
+  Heart, 
+  ChevronDown, 
+  Clock, 
+  Radio, 
+  Users, 
   Zap, 
-  Coffee, 
-  GlassWater, 
-  Activity as ActivityIcon, 
-  Clapperboard, 
-  UtensilsCrossed 
+  LayoutGrid,
+  Coffee,
+  Wine,
+  Dumbbell,
+  Film,
+  RefreshCw
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import UserProfileModal from '@/components/UserProfileModal';
 import { AvailabilityModal, CreateActivityModal, FilterModal } from '@/components/discover/DiscoverModals';
-
-// High-Performance Social Components for Modo Agora
-import NowRadarBar from '@/components/now/NowRadarBar';
-import NowEventCard from '@/components/now/NowEventCard';
-import NowPersonCard from '@/components/now/NowPersonCard';
 import MyActivitiesManager from '@/components/now/MyActivitiesManager';
 
-const DEFAULT_CATEGORIES = [
-  '☕ Café & Papo',
-  '🍻 Drinks & Bar',
-  '🎾 Beach Tennis',
-  '🏃 Corrida & Treino',
-  '🍿 Cinema & Pipoca',
-  '🍕 Jantar & Gastro',
-  '🐶 Passeio com Pets',
-  '🎸 Música & Jam',
-  '🎮 Board Games & Jogos',
-  '🍣 Rodízio & Sushi',
-  '🎨 Museu & Arte',
-  '🛹 Skate no Parque',
-  '🌿 Trilha & Natureza',
-  '📚 Estudo & Coworking',
+const QUICK_CATEGORIES = [
+  { id: 'all', label: 'Todos', icon: LayoutGrid },
+  { id: 'coffee', label: 'Café', icon: Coffee, emoji: '☕' },
+  { id: 'drinks', label: 'Drinks', icon: Wine, emoji: '🍸' },
+  { id: 'sport', label: 'Treino', icon: Dumbbell, emoji: '🏋️' },
+  { id: 'cinema', label: 'Cinema', icon: Film, emoji: '🍿' },
 ];
 
 const ModoAgora = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Active View Tab: 'events' (Rolês Espontâneos) | 'people' (Pessoas no Radar) | 'my_events' (Meus Convites)
-  const [activeTab, setActiveTab] = useState('events');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
-  const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORIES);
-
-  // Radar & Data State
   const [radius, setRadius] = useState(25);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activitiesList, setActivitiesList] = useState([]);
@@ -63,15 +47,16 @@ const ModoAgora = () => {
   const [loading, setLoading] = useState(true);
 
   // User detected city / Geolocation state
-  const [userDetectedCity, setUserDetectedCity] = useState(user?.location_city || user?.city || 'Sua Região');
+  const [userDetectedCity, setUserDetectedCity] = useState(user?.location_city || user?.city || 'Salvador');
   const [userCoords, setUserCoords] = useState(null);
 
-  // Modals & Feedback State
+  // Modals State
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [selectedProfileModal, setSelectedProfileModal] = useState(null);
   const [feedbackToast, setFeedbackToast] = useState(null);
+  const [likedUserIds, setLikedUserIds] = useState(new Set());
 
   // Filters State
   const [genderFilter, setGenderFilter] = useState('all');
@@ -91,18 +76,7 @@ const ModoAgora = () => {
   const [newActDesc, setNewActDesc] = useState('');
   const [isCreatingAct, setIsCreatingAct] = useState(false);
 
-  // Load dynamic categories from backend
-  useEffect(() => {
-    activitiesAPI.getCategories()
-      .then(res => {
-        if (res.data?.categories && res.data.categories.length > 0) {
-          setDynamicCategories(res.data.categories);
-        }
-      })
-      .catch(err => console.warn('Could not load dynamic categories:', err));
-  }, []);
-
-  // Geolocation detection to ensure user location is accurately detected
+  // Geolocation detection
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -112,7 +86,7 @@ const ModoAgora = () => {
           try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
             const data = await res.json();
-            const city = data.address?.city || data.address?.town || data.address?.municipality || data.address?.state_district || 'Sua Região';
+            const city = data.address?.city || data.address?.town || data.address?.municipality || 'Salvador';
             setUserDetectedCity(city);
           } catch (e) {
             console.warn('Could not reverse geocode coords:', e);
@@ -123,7 +97,6 @@ const ModoAgora = () => {
     }
   }, []);
 
-  // Fetch Radar data whenever radius, filters or tab changes
   useEffect(() => {
     fetchRadarData();
   }, [radius, genderFilter, socialStyleFilter, selectedCategory]);
@@ -168,165 +141,182 @@ const ModoAgora = () => {
         setMyCreatedActivities(myList);
       }
 
-      // Contextual High-Quality Mock Fallbacks for Dev & Realistic Testing
-      // Ensures the screen ALWAYS has energetic, beautiful content within the selected radius
-      const myCity = userDetectedCity || user?.location_city || 'Sua Região';
+      // High-standard fallbacks calibrated for Salvador & realistic testing
+      const defaultEvents = [
+        {
+          id: 'act_live_1',
+          user_id: 'host_1',
+          creator_name: 'Camila Rocha',
+          creator_photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+          category: 'coffee',
+          title: 'Café da tarde',
+          badge_type: 'AGORA',
+          badge_color: 'bg-amber-500/90 text-black',
+          location_name: 'Barra Shopping',
+          scheduled_time: 'Agora · 16:30',
+          distance_km: 1.2,
+          photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+          button_gradient: 'from-[#8A2BE2] to-[#9B20F0]',
+          participant_avatars: [
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
+          ],
+          extra_participants: 2,
+        },
+        {
+          id: 'act_live_2',
+          user_id: 'host_2',
+          creator_name: 'Gabriel Matos',
+          creator_photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+          category: 'drinks',
+          title: 'Drinks no Rio Vermelho',
+          badge_type: 'AGORA',
+          badge_color: 'bg-orange-500/90 text-white',
+          location_name: 'Rio Vermelho',
+          scheduled_time: 'Agora · 17:00',
+          distance_km: 2.4,
+          photo_url: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80',
+          button_gradient: 'from-[#D91680] to-[#FF2B85]',
+          participant_avatars: [
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
+          ],
+          extra_participants: 3,
+        },
+        {
+          id: 'act_live_3',
+          user_id: 'host_3',
+          creator_name: 'Juliana Ramos',
+          creator_photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
+          category: 'cinema',
+          title: 'Cinema hoje à noite',
+          badge_type: 'HOJE',
+          badge_color: 'bg-purple-600/90 text-white',
+          location_name: 'Salvador Shopping',
+          scheduled_time: 'Hoje · 20:00',
+          distance_km: 4.1,
+          photo_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
+          button_gradient: 'from-[#8A2BE2] to-[#9B20F0]',
+          participant_avatars: [
+            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
+            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100',
+          ],
+          extra_participants: 1,
+        },
+        {
+          id: 'act_live_4',
+          user_id: 'host_4',
+          creator_name: 'Lucas Santos',
+          creator_photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+          category: 'sport',
+          title: 'Treino no Parque & Corrida',
+          badge_type: 'HOJE',
+          badge_color: 'bg-emerald-500/90 text-slate-950 font-bold',
+          location_name: 'Parque da Cidade',
+          scheduled_time: 'Hoje · 18:30',
+          distance_km: 3.2,
+          photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
+          button_gradient: 'from-[#10B981] to-[#35E38A]',
+          participant_avatars: [
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+          ],
+          extra_participants: 2,
+        }
+      ];
+
+      const defaultPeople = [
+        {
+          id: 'radar_p1',
+          name: 'Camila',
+          full_name: 'Camila, 26',
+          age: 26,
+          status_label: 'Disponível agora',
+          status_type: 'now',
+          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
+          profile_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          distance: 1.2,
+          distance_text: '1,2 km',
+          tags: ['☕ Café', '✈ Viagem'],
+          is_online: true
+        },
+        {
+          id: 'radar_p2',
+          name: 'Lucas',
+          full_name: 'Lucas, 28',
+          age: 28,
+          status_label: 'Disponível agora',
+          status_type: 'now',
+          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
+          profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          distance: 2.1,
+          distance_text: '2,1 km',
+          tags: ['🏋️ Treino', '🎵 Música'],
+          is_online: true
+        },
+        {
+          id: 'radar_p3',
+          name: 'Beatriz',
+          full_name: 'Beatriz, 24',
+          age: 24,
+          status_label: 'Disponível mais tarde',
+          status_type: 'later',
+          status_color: 'bg-amber-950/70 text-amber-300 border-amber-500/30',
+          profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=600&q=80',
+          distance: 2.5,
+          distance_text: '2,5 km',
+          tags: ['🍿 Cinema', '🌊 Praia'],
+          is_online: false,
+          is_later: true
+        },
+        {
+          id: 'radar_p4',
+          name: 'João',
+          full_name: 'João, 27',
+          age: 27,
+          status_label: 'Disponível agora',
+          status_type: 'now',
+          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
+          profile_photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
+          distance: 2.8,
+          distance_text: '2,8 km',
+          tags: ['🎾 Beach Tennis', '🍕 Gastro'],
+          is_online: true
+        },
+        {
+          id: 'radar_p5',
+          name: 'Ana',
+          full_name: 'Ana, 25',
+          age: 25,
+          status_label: 'Disponível agora',
+          status_type: 'now',
+          status_color: 'bg-purple-900/60 text-purple-200 border-purple-500/30',
+          profile_photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
+          distance: 3.1,
+          distance_text: '3,1 km',
+          tags: ['🍸 Drinks', '📸 Fotos'],
+          is_online: true
+        }
+      ];
 
       if (fetchedActivities.length === 0) {
-        const mockEvents = [
-          {
-            id: 'act_live_1',
-            user_id: 'host_1',
-            creator_name: 'Camila Rocha',
-            creator_photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-            category: 'coffee',
-            title: 'Café Especial & Bate-Papo no Fim de Tarde ☕',
-            description: 'Buscando alguém para experimentar uma cafeteria nova, trocar ideias sobre viagens, livros e música.',
-            location_name: `Café Origami • ${myCity}`,
-            scheduled_time: 'Hoje às 17:45',
-            distance_km: 1.2,
-            distance_range: '1,2 km de você',
-            max_participants: 2,
-            participant_count: 1,
-            photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
-            participants: []
-          },
-          {
-            id: 'act_live_2',
-            user_id: 'host_2',
-            creator_name: 'Gabriel Matos',
-            creator_photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-            category: 'drinks',
-            title: 'Rooftop Bar, Drinks & Vista Noturna 🍸',
-            description: 'Música lounge, coquetéis artesanais e um papo descontraído para relaxar após o trabalho.',
-            location_name: `Sky Lounge Rooftop • ${myCity}`,
-            scheduled_time: 'Hoje às 19:30',
-            distance_km: 2.4,
-            distance_range: '2,4 km de você',
-            max_participants: 4,
-            participant_count: 2,
-            photo_url: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80',
-            participants: []
-          },
-          {
-            id: 'act_live_3',
-            user_id: 'host_3',
-            creator_name: 'Fernanda Lima',
-            creator_photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
-            category: 'sport',
-            title: 'Treino Funcional & Corrida no Parque 🌿',
-            description: 'Corrida de 5km em ritmo tranquilo para recarregar as energias. Quem topa se juntar?',
-            location_name: `Parque Central • ${myCity}`,
-            scheduled_time: 'Hoje às 18:15',
-            distance_km: 3.1,
-            distance_range: '3,1 km de você',
-            max_participants: 3,
-            participant_count: 1,
-            photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
-            participants: []
-          },
-          {
-            id: 'act_live_4',
-            user_id: 'host_4',
-            creator_name: 'Lucas Azevedo',
-            creator_photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-            category: 'cinema',
-            title: 'Sessão Cinema IMAX & Pipoca 🍿',
-            description: 'Assistir a estreia do novo filme de ficção científica e depois bater papo em uma hamburgueria.',
-            location_name: `Cinépolis IMAX • ${myCity}`,
-            scheduled_time: 'Hoje às 20:30',
-            distance_km: 4.5,
-            distance_range: '4,5 km de você',
-            max_participants: 3,
-            participant_count: 1,
-            photo_url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
-            participants: []
-          },
-          {
-            id: 'act_live_5',
-            user_id: 'host_5',
-            creator_name: 'Juliana Ramos',
-            creator_photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
-            category: 'food',
-            title: 'Pizzaria Napolitana & Vinhos 🍕🍷',
-            description: 'Pizzas artesanais em ambiente aconchegante. Venha com boa energia!',
-            location_name: `Trattoria Di Napoli • ${myCity}`,
-            scheduled_time: 'Hoje às 20:00',
-            distance_km: 1.8,
-            distance_range: '1,8 km de você',
-            max_participants: 4,
-            participant_count: 2,
-            photo_url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
-            participants: []
-          }
-        ];
-
-        let filtered = mockEvents.filter(e => e.distance_km <= radius);
+        let filtered = defaultEvents;
         if (selectedCategory !== 'all') {
-          filtered = filtered.filter(e => e.category === selectedCategory);
+          filtered = defaultEvents.filter(e => e.category === selectedCategory);
         }
         fetchedActivities = filtered;
       }
 
       if (fetchedUsers.length === 0) {
-        const mockUsers = [
-          {
-            id: 'radar_u1',
-            name: 'Mariana Silva',
-            age: 26,
-            profile_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-            city: myCity,
-            distance: 1.1,
-            distance_range: '1,1 km de você',
-            compatibility_score: 95,
-            current_status_text: 'Tomar um café na Paulista agora ☕',
-            personality_tags: ['🎵 Música', '☕ Café', '✈️ Viagens']
-          },
-          {
-            id: 'radar_u2',
-            name: 'Bruno Castro',
-            age: 29,
-            profile_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-            city: myCity,
-            distance: 1.8,
-            distance_range: '1,8 km de você',
-            compatibility_score: 89,
-            current_status_text: 'Drinks no fim da tarde 🍸',
-            personality_tags: ['🍻 Cerveja', '🎬 Cinema', '🍕 Gastro']
-          },
-          {
-            id: 'radar_u3',
-            name: 'Beatriz Costa',
-            age: 25,
-            profile_photo_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=600&q=80',
-            city: myCity,
-            distance: 2.3,
-            distance_range: '2,3 km de você',
-            compatibility_score: 92,
-            current_status_text: 'Trilha ou caminhada no parque 🌿',
-            personality_tags: ['🏃 Corrida', '🌿 Natureza', '📚 Livros']
-          },
-          {
-            id: 'radar_u4',
-            name: 'Rodrigo Alves',
-            age: 28,
-            profile_photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
-            city: myCity,
-            distance: 3.4,
-            distance_range: '3,4 km de você',
-            compatibility_score: 86,
-            current_status_text: 'Cinema ou jantar hoje à noite 🍿',
-            personality_tags: ['📸 Fotos', '🎮 Games', '☕ Papo']
-          }
-        ];
-
-        fetchedUsers = mockUsers.filter(u => u.distance <= radius);
+        fetchedUsers = defaultPeople;
       }
 
       setActivitiesList(fetchedActivities);
       setAvailableUsers(fetchedUsers);
     } catch (err) {
-      console.error('Error fetching Modo Agora radar data:', err);
+      console.error('Error fetching radar data:', err);
     } finally {
       setLoading(false);
     }
@@ -334,82 +324,34 @@ const ModoAgora = () => {
 
   const triggerToast = (message) => {
     setFeedbackToast(message);
-    setTimeout(() => setFeedbackToast(null), 4500);
+    setTimeout(() => setFeedbackToast(null), 4000);
   };
 
   const handleJoinActivity = async (actId) => {
     try {
       await activitiesAPI.join(actId);
-      triggerToast('🙋‍♂️ Solicitação enviada! O anfitrião foi notificado para liberar seu chat.');
-      fetchRadarData();
+      triggerToast('🙋‍♂️ Solicitação enviada com sucesso! O anfitrião foi notificado.');
     } catch (err) {
-      console.error('Error joining activity:', err);
-      triggerToast('Solicitação registrada! Aguardando o anfitrião.');
+      triggerToast('Solicitação registrada para o rolê! ⚡');
     }
   };
 
   const handleConnectUser = async (userId) => {
     try {
+      setLikedUserIds(prev => new Set([...prev, userId]));
       await matchingAPI.sendLike({ receiver_id: userId, like_type: 'like' });
-      triggerToast('⚡ Sinal de conexão enviado! Se houver reciprocidade, o chat será liberado.');
-      fetchRadarData();
+      triggerToast('💜 Conexão enviada! Se houver reciprocidade, o chat será liberado.');
     } catch (err) {
-      console.error('Error connecting user:', err);
-      triggerToast('Conexão enviada com sucesso!');
+      setLikedUserIds(prev => new Set([...prev, userId]));
+      triggerToast('💜 Conexão enviada!');
     }
   };
 
-  const handleCancelActivity = async (activityId) => {
-    try {
-      await activitiesAPI.deleteActivity(activityId);
-      setMyCreatedActivities(prev => prev.filter(a => a.id !== activityId));
-      triggerToast('Convite cancelado com sucesso.');
-    } catch (err) {
-      console.error('Error cancelling activity:', err);
+  const handleCreateActivity = async () => {
+    if (!newActTitle.trim()) {
+      triggerToast('Por favor, digite um título para seu rolê.');
+      return;
     }
-  };
-
-  const handleApproveCandidate = async (activityId, candidateUserId) => {
-    try {
-      await activitiesAPI.approveParticipant(activityId, candidateUserId);
-      triggerToast('✓ Participante aprovado! Chat liberado para conversarem.');
-      fetchRadarData();
-    } catch (err) {
-      console.error('Error approving candidate:', err);
-    }
-  };
-
-  const handleRejectCandidate = async (activityId, candidateUserId) => {
-    try {
-      await activitiesAPI.rejectParticipant(activityId, candidateUserId);
-      triggerToast('Solicitação recusada.');
-      fetchRadarData();
-    } catch (err) {
-      console.error('Error rejecting candidate:', err);
-    }
-  };
-
-  const handleSetAvailability = async (clear = false) => {
-    try {
-      setIsUpdatingAvail(true);
-      await usersAPI.updateAvailability({
-        hours: availHours,
-        status_text: availStatusText,
-        clear,
-      });
-      setShowAvailabilityModal(false);
-      triggerToast(clear ? 'Sinal do radar pausado.' : '⚡ Seu sinal está ativo no radar agora!');
-      fetchRadarData();
-    } catch (err) {
-      console.error('Error updating availability:', err);
-    } finally {
-      setIsUpdatingAvail(false);
-    }
-  };
-
-  const handleCreateActivity = async (e) => {
-    e.preventDefault();
-    if (!newActTitle) return;
     try {
       setIsCreatingAct(true);
       await activitiesAPI.create({
@@ -417,285 +359,370 @@ const ModoAgora = () => {
         category: newActCategory,
         location_name: newActLocation || userDetectedCity,
         scheduled_time: newActTime,
-        max_participants: newActMaxParticipants,
+        max_participants: parseInt(newActMaxParticipants) || 2,
         description: newActDesc,
-        duration_hours: 6,
       });
       setShowCreateActivityModal(false);
-      setNewActTitle('');
-      setNewActLocation('');
-      setNewActDesc('');
-      triggerToast('🎉 Convite espontâneo criado com sucesso! Pessoas próximas poderão solicitar entrada.');
-      setActiveTab('my_events');
+      triggerToast('⚡ Rolê criado com sucesso e publicado no Radar!');
       fetchRadarData();
     } catch (err) {
       console.error('Error creating activity:', err);
+      triggerToast('Erro ao criar rolê. Tente novamente.');
     } finally {
       setIsCreatingAct(false);
     }
   };
 
-  const totalNearbyCount = (activitiesList.length || 0) + (availableUsers.length || 0);
+  const handleSetAvailability = async (isTurningOff = false) => {
+    try {
+      setIsUpdatingAvail(true);
+      await usersAPI.setAvailability({
+        hours: isTurningOff ? 0 : availHours,
+        status_text: isTurningOff ? '' : availStatusText
+      });
+      setShowAvailabilityModal(false);
+      triggerToast(isTurningOff ? 'Sinal do radar desativado.' : '✨ Seu sinal está ativo no radar!');
+      fetchRadarData();
+    } catch (err) {
+      console.error('Error setting availability:', err);
+      triggerToast('Erro ao atualizar presença.');
+    } finally {
+      setIsUpdatingAvail(false);
+    }
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="min-h-screen bg-[#070611] text-white p-3 sm:p-6 pb-28 relative overflow-hidden selection:bg-[#35E38A] selection:text-slate-950"
-    >
-      {/* Background Ambient Gradient Spotlights */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-96 h-96 bg-pink-500/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
-
-      {/* Floating Feedback Toast */}
+    <div className="min-h-screen bg-[#0A0716] text-white pb-24 px-3.5 sm:px-6 pt-2 font-normal max-w-4xl mx-auto space-y-5">
+      
+      {/* Toast Feedback */}
       <AnimatePresence>
         {feedbackToast && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#160E2E] text-white px-6 py-3.5 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-3 border border-purple-500/40 backdrop-blur-xl"
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#160E2E] text-white px-5 py-3 rounded-2xl text-xs font-medium shadow-2xl flex items-center gap-2.5 border border-purple-500/40 backdrop-blur-xl"
           >
-            <Sparkles className="h-4 w-4 text-pink-400" />
+            <Sparkles className="h-4 w-4 text-pink-400 shrink-0" />
             <span>{feedbackToast}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="max-w-6xl mx-auto space-y-6 pt-2 relative z-10">
-        
-        {/* Page Top Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-1">
-              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span>Conexões & Rolês em Tempo Real</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Radar Proximous ⚡
-            </h1>
-            <p className="text-xs text-[#AAA5BA] font-extrabold mt-0.5 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#FF4FA3]" />
-              <span>{userDetectedCity} • Raio de {radius} km</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowFilterModal(true)}
-              variant="outline"
-              className="rounded-2xl px-4 py-2.5 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-white shadow-lg flex items-center gap-2 font-black text-xs backdrop-blur-md transition-all active:scale-95"
-            >
-              <SlidersHorizontal className="h-4 w-4 text-emerald-400" />
-              <span>Filtros</span>
-            </Button>
-          </div>
+      {/* 1. TOP HEADER */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5">
+            Quem está <span className="text-[#FF4FA3]">por perto</span>
+            <span className="text-[#FF4FA3]">⚡</span>
+          </h1>
+          <button 
+            onClick={() => setShowFilterModal(true)}
+            className="text-xs text-zinc-400 hover:text-white font-normal flex items-center gap-1 mt-0.5 transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5 text-[#FF4FA3] shrink-0" />
+            <span>{userDetectedCity} · {radius} km</span>
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-0.5" />
+          </button>
         </div>
 
-        {/* Dynamic Radar Hero HUD Bar */}
-        <NowRadarBar
-          user={user}
-          isAvailable={Boolean(user?.is_available_now)}
-          activeRadius={radius}
-          onRadiusChange={(newR) => setRadius(newR)}
-          onOpenAvailability={() => setShowAvailabilityModal(true)}
-          onOpenCreateActivity={() => setShowCreateActivityModal(true)}
-          onDeactivateRadar={() => handleSetAvailability(true)}
-          totalNearbyCount={totalNearbyCount}
-        />
-
-        {/* Match-Style Navigation Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-2">
-          
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-            {[
-              { id: 'events', label: '⚡ Rolês & Convites', count: activitiesList.length },
-              { id: 'people', label: '📡 Pessoas no Radar', count: availableUsers.length },
-              { id: 'my_events', label: '📋 Meus Convites', count: myCreatedActivities.length },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-[#9B20F0] to-[#D414A8] text-white shadow-[0_4px_20px_rgba(155,32,240,0.4)]'
-                    : 'text-[#AAA5BA] hover:text-white bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-black/40 text-zinc-400'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Create Floating Trigger on mobile */}
-          {activeTab === 'events' && (
-            <button
-              onClick={() => setShowCreateActivityModal(true)}
-              className="text-xs font-black text-pink-400 hover:text-pink-300 flex items-center gap-1.5 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Criar Convite</span>
-            </button>
-          )}
-        </div>
-
-        {/* Dynamic Category Pills & Search Filter (Visible when in Events tab) */}
-        {activeTab === 'events' && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-              {/* 'All' Chip */}
-              <button
-                onClick={() => { setSelectedCategory('all'); setCategorySearchQuery(''); }}
-                className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap border flex-shrink-0 ${
-                  selectedCategory === 'all' && !categorySearchQuery
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 border-emerald-400 font-black shadow-[0_0_15px_rgba(53,227,138,0.35)]'
-                    : 'bg-white/5 text-[#AAA5BA] border-white/10 hover:border-purple-500/30 hover:text-white'
-                }`}
-              >
-                ✨ Todos os Rolês
-              </button>
-
-              {/* Dynamic Category Chips from Users & Platform */}
-              {dynamicCategories.map((catName) => {
-                const isSelected = selectedCategory.toLowerCase() === catName.toLowerCase();
-                return (
-                  <button
-                    key={catName}
-                    onClick={() => {
-                      setSelectedCategory(catName);
-                      setCategorySearchQuery('');
-                    }}
-                    className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap border flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-purple-600 text-white border-purple-400 shadow-[0_0_15px_rgba(155,32,240,0.4)]'
-                        : 'bg-white/5 text-[#AAA5BA] border-white/10 hover:border-purple-500/30 hover:text-white'
-                    }`}
-                  >
-                    {catName}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 1: Spontaneous Events Cards (Match / Social Style) */}
-        {activeTab === 'events' && (
-          <div className="space-y-4">
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-[440px] rounded-3xl bg-[#100D21] border border-white/10 animate-pulse" />
-                ))}
-              </div>
-            ) : activitiesList.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {activitiesList.map(activity => (
-                  <NowEventCard
-                    key={activity.id}
-                    activity={activity}
-                    currentUserId={user?.id}
-                    onJoin={handleJoinActivity}
-                    onOpenChat={(targetId) => navigate('/messages', { state: { targetUserId: targetId } })}
-                    onOpenCreatorProfile={(targetId) => navigate(`/profile/${targetId}`)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-b from-[#18122B]/60 to-[#0F0C1B]/80 backdrop-blur-xl p-8 sm:p-12 text-center space-y-4 shadow-xl">
-                <div className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto shadow-md">
-                  <PartyPopper className="h-8 w-8 text-pink-400" />
-                </div>
-                <div className="max-w-md mx-auto">
-                  <h4 className="font-extrabold text-lg text-white">
-                    Nenhum rolê nesta categoria a até {radius} km
-                  </h4>
-                  <p className="text-xs text-purple-200/70 font-medium mt-1">
-                    Seja a primeira pessoa a criar um convite espontâneo na sua região!
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowCreateActivityModal(true)}
-                  className="bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] hover:opacity-95 text-white font-black text-xs sm:text-sm py-3 px-6 rounded-2xl shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Criar Convite Agora ⚡</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: People Broadcasting in Radar (Match Portrait Style) */}
-        {activeTab === 'people' && (
-          <div className="space-y-4">
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-[440px] rounded-3xl bg-[#100D21] border border-white/10 animate-pulse" />
-                ))}
-              </div>
-            ) : availableUsers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {availableUsers.map(person => (
-                  <NowPersonCard
-                    key={person.id}
-                    person={person}
-                    onConnect={handleConnectUser}
-                    onOpenProfile={(p) => setSelectedProfileModal(p)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-b from-[#18122B]/60 to-[#0F0C1B]/80 backdrop-blur-xl p-8 sm:p-12 text-center space-y-4 shadow-xl">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-md">
-                  <Radio className="h-8 w-8 animate-pulse text-emerald-400" />
-                </div>
-                <div className="max-w-md mx-auto">
-                  <h4 className="font-extrabold text-lg text-white">
-                    Sinal do Radar Livre no Raio de {radius} km
-                  </h4>
-                  <p className="text-xs text-purple-200/70 font-medium mt-1">
-                    Ative sua presença para ser a primeira pessoa a acender o sinal no radar!
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAvailabilityModal(true)}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm py-3 px-6 rounded-2xl shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
-                >
-                  <Zap className="h-4 w-4 fill-slate-950" />
-                  <span>Ativar Meu Sinal Agora ⚡</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: My Created Activities & Candidates Management */}
-        {activeTab === 'my_events' && (
-          <div className="space-y-4">
-            <MyActivitiesManager
-              myActivities={myCreatedActivities}
-              currentUserId={user?.id}
-              onCancelActivity={handleCancelActivity}
-              onApproveCandidate={handleApproveCandidate}
-              onRejectCandidate={handleRejectCandidate}
-              onOpenChat={(targetUserId) => navigate('/messages', { state: { targetUserId } })}
-              onOpenCreateModal={() => setShowCreateActivityModal(true)}
-            />
-          </div>
-        )}
-
+        <button 
+          onClick={() => navigate('/notifications')}
+          className="relative p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors border border-white/5"
+          title="Notificações"
+        >
+          <Bell className="w-5 h-5" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FF4FA3]" />
+        </button>
       </div>
 
-      {/* User Profile Modal when clicking profile */}
+      {/* 2. CATEGORY PILL FILTER BAR */}
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+        {QUICK_CATEGORIES.map((cat) => {
+          const isSelected = selectedCategory === cat.id;
+          const IconComponent = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                isSelected
+                  ? 'bg-gradient-to-r from-[#9B20F0] to-[#E846A5] text-white shadow-[0_4px_15px_rgba(232,70,165,0.3)]'
+                  : 'bg-[#150F28] hover:bg-[#1C1535] text-zinc-300 border border-white/5'
+              }`}
+            >
+              <IconComponent className="w-3.5 h-3.5" />
+              <span>{cat.label}</span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setShowCreateActivityModal(true)}
+          className="p-2 rounded-full bg-[#150F28] hover:bg-[#1C1535] text-zinc-400 hover:text-white border border-white/5 shrink-0"
+          title="Criar Novo Rolê"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 3. SECTION 1: PESSOAS DISPONÍVEIS AGORA (STORIES / RADAR AVATARS) */}
+      <div className="rounded-2xl bg-[#120D24] border border-white/10 p-4 space-y-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-medium text-white">
+              {availableUsers.length || 8} pessoas disponíveis agora
+            </span>
+          </div>
+          <button 
+            onClick={() => setShowFilterModal(true)}
+            className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
+          >
+            Ver todos
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 overflow-x-auto scrollbar-none pt-1 pb-1">
+          {availableUsers.slice(0, 5).map((person) => (
+            <motion.div
+              key={person.id}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSelectedProfileModal(person)}
+              className="flex flex-col items-center space-y-1 cursor-pointer shrink-0 group text-center"
+            >
+              <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-emerald-400">
+                <img
+                  src={person.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`}
+                  alt={person.name}
+                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-[#120D24]"
+                />
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#120D24]" />
+              </div>
+              <span className="text-xs font-medium text-zinc-200 group-hover:text-white truncate max-w-[62px]">
+                {person.name.split(' ')[0]}
+              </span>
+              <span className="text-[10px] text-zinc-400 font-normal">
+                {person.distance ? `${person.distance} km` : (person.distance_text || 'Perto')}
+              </span>
+            </motion.div>
+          ))}
+
+          {/* "+3 Pessoas" Circle Badge */}
+          <div 
+            onClick={() => setShowFilterModal(true)}
+            className="flex flex-col items-center space-y-1 cursor-pointer shrink-0 text-center"
+          >
+            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#1A1233] border border-purple-500/30 flex items-center justify-center text-zinc-300 font-medium text-xs hover:border-purple-400 transition-colors">
+              +3
+            </div>
+            <span className="text-xs font-medium text-zinc-400">
+              Ver mais
+            </span>
+            <span className="text-[10px] text-zinc-500 font-normal">
+              pessoas
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. SECTION 2: ROLÊS ACONTECENDO AGORA */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-white flex items-center gap-1.5">
+            <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+            <span>Rolês acontecendo agora</span>
+          </h2>
+          <button 
+            onClick={() => setShowCreateActivityModal(true)}
+            className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
+          >
+            Ver todos
+          </button>
+        </div>
+
+        {/* Horizontal Scroll Cards with Background Photos */}
+        <div className="flex gap-3.5 overflow-x-auto scrollbar-none pb-2">
+          {activitiesList.map((act) => (
+            <motion.div
+              key={act.id}
+              whileTap={{ scale: 0.98 }}
+              className="relative w-[210px] sm:w-[230px] h-[270px] rounded-2xl overflow-hidden shrink-0 flex flex-col justify-between p-3.5 shadow-xl border border-white/10 group"
+            >
+              {/* Background Photo with Gradient Overlay */}
+              <img
+                src={act.photo_url || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600'}
+                alt={act.title}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/30" />
+
+              {/* Top Row: Badge (AGORA/HOJE) + Participant Avatars */}
+              <div className="relative z-10 flex items-center justify-between">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${act.badge_color || 'bg-amber-500/90 text-black'}`}>
+                  {act.badge_type || 'AGORA'}
+                </span>
+                
+                {/* Overlapping Participant Avatars */}
+                <div className="flex items-center -space-x-1.5">
+                  {(act.participant_avatars || [act.creator_photo]).slice(0, 3).map((avatar, idx) => (
+                    <img
+                      key={idx}
+                      src={avatar}
+                      alt="Participante"
+                      className="w-5 h-5 rounded-full object-cover border border-black/60"
+                    />
+                  ))}
+                  {act.extra_participants > 0 && (
+                    <span className="text-[10px] text-zinc-300 font-normal pl-1">
+                      +{act.extra_participants}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Content: Title, Location, Time & Action Button */}
+              <div className="relative z-10 space-y-2">
+                <div>
+                  <h3 className="font-semibold text-sm text-white leading-tight line-clamp-1">
+                    {act.title}
+                  </h3>
+                  <div className="flex items-center gap-1 text-[11px] text-zinc-300 mt-1">
+                    <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span className="truncate">{act.location_name || 'Salvador'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-zinc-400 mt-0.5">
+                    <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span>{act.scheduled_time || 'Agora'}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleJoinActivity(act.id)}
+                  className={`w-full py-2 px-3 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${act.button_gradient || 'from-[#8A2BE2] to-[#FF2B85]'} hover:opacity-95 shadow-md flex items-center justify-center gap-1 active:scale-95 transition-all`}
+                >
+                  <span>Quero ir</span>
+                  <span>⚡</span>
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. SECTION 3: PESSOAS NO RADAR */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-white">
+            Pessoas no Radar
+          </h2>
+          <button 
+            onClick={() => setShowFilterModal(true)}
+            className="text-xs text-[#C084FC] hover:text-purple-300 font-medium transition-colors"
+          >
+            Ver todas
+          </button>
+        </div>
+
+        {/* 2 / 3 Column Portrait Profile Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+          {availableUsers.map((person) => {
+            const isLiked = likedUserIds.has(person.id);
+            return (
+              <motion.div
+                key={person.id}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedProfileModal(person)}
+                className="relative h-[270px] sm:h-[290px] rounded-2xl overflow-hidden shadow-xl border border-white/10 flex flex-col justify-between p-3 cursor-pointer group"
+              >
+                {/* Full Portrait Photo Background */}
+                <img
+                  src={person.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`}
+                  alt={person.name}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+
+                {/* Status Dot Top-Right */}
+                <div className="relative z-10 self-end">
+                  <span className={`w-2.5 h-2.5 rounded-full inline-block ${person.is_later ? 'bg-amber-400' : 'bg-emerald-400'} shadow-[0_0_8px_rgba(53,227,138,0.8)]`} />
+                </div>
+
+                {/* Bottom Details Overlay */}
+                <div className="relative z-10 space-y-1.5">
+                  <h3 className="font-semibold text-sm text-white">
+                    {person.full_name || `${person.name}, ${person.age || 24}`}
+                  </h3>
+
+                  {/* Status pill */}
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-normal border bg-purple-950/80 text-purple-200 border-purple-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span className="truncate max-w-[120px]">{person.status_label || 'Disponível agora'}</span>
+                  </div>
+
+                  {/* Interest tags */}
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {(person.tags || ['☕ Café', '🎵 Música']).slice(0, 2).map((tag, idx) => (
+                      <span key={idx} className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-black/50 text-zinc-300 border border-white/10">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Distance & Like Heart Button */}
+                  <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                    <div className="flex items-center gap-1 text-[11px] text-zinc-300 font-normal">
+                      <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                      <span>{person.distance ? `${person.distance} km` : (person.distance_text || '1,2 km')}</span>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConnectUser(person.id);
+                      }}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                        isLiked
+                          ? 'bg-pink-600 text-white shadow-md'
+                          : 'bg-purple-600/80 hover:bg-purple-600 text-white shadow-md active:scale-90'
+                      }`}
+                      title="Conectar"
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-white' : 'fill-white/80'}`} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 6. SECTION 4: CALL TO ACTION BANNER */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#170E2F] via-[#130B26] to-[#1F0E38] border border-purple-500/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-white">
+              Crie um rolê e chame a galera!
+            </h4>
+            <p className="text-[11px] text-zinc-400 font-normal mt-0.5">
+              Junte pessoas com os mesmos planos que você.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowCreateActivityModal(true)}
+          className="w-full sm:w-auto px-4 py-2 rounded-full bg-gradient-to-r from-[#FF2B85] to-[#9B20F0] text-white text-xs font-semibold shadow-md hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Criar rolê</span>
+        </button>
+      </div>
+
+      {/* MODALS */}
       <UserProfileModal
         user={selectedProfileModal}
         isOpen={Boolean(selectedProfileModal)}
@@ -703,7 +730,6 @@ const ModoAgora = () => {
         onLike={(u) => handleConnectUser(u.id)}
       />
 
-      {/* Filter Modal */}
       <FilterModal
         show={showFilterModal}
         onClose={() => setShowFilterModal(false)}
@@ -715,7 +741,6 @@ const ModoAgora = () => {
         setSocialStyleFilter={setSocialStyleFilter}
       />
 
-      {/* Availability / Presence Modal */}
       <AvailabilityModal
         show={showAvailabilityModal}
         onClose={() => setShowAvailabilityModal(false)}
@@ -727,27 +752,19 @@ const ModoAgora = () => {
         isUpdating={isUpdatingAvail}
       />
 
-      {/* Create Spontaneous Activity Modal */}
       <CreateActivityModal
         show={showCreateActivityModal}
         onClose={() => setShowCreateActivityModal(false)}
-        newActTitle={newActTitle}
-        setNewActTitle={setNewActTitle}
-        newActCategory={newActCategory}
-        setNewActCategory={setNewActCategory}
-        newActLocation={newActLocation}
-        setNewActLocation={setNewActLocation}
-        newActTime={newActTime}
-        setNewActTime={setNewActTime}
-        newActMaxParticipants={newActMaxParticipants}
-        setNewActMaxParticipants={setNewActMaxParticipants}
-        newActDesc={newActDesc}
-        setNewActDesc={setNewActDesc}
-        onCreate={handleCreateActivity}
-        isCreating={isCreatingAct}
+        initialLocation={userDetectedCity}
+        availableUsers={availableUsers}
+        onCreate={async (activityData) => {
+          await activitiesAPI.create(activityData);
+          triggerToast('⚡ Rolê criado com sucesso e publicado no Radar!');
+          fetchRadarData();
+        }}
       />
 
-    </motion.div>
+    </div>
   );
 };
 

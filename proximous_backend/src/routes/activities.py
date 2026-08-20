@@ -292,6 +292,7 @@ def create_activity():
             category=data.get('category'),
             title=data.get('title'),
             description=data.get('description', ''),
+            photo_url=data.get('photo_url'),
             location_name=data.get('location_name', current_user.location_city or 'São Paulo, SP'),
             scheduled_time=data.get('scheduled_time', 'Hoje mais tarde'),
             latitude=lat,

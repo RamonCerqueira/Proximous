@@ -18,6 +18,7 @@ class Activity(db.Model):
     
     latitude = db.Column(db.Float, nullable=False, default=-23.5505)
     longitude = db.Column(db.Float, nullable=False, default=-46.6333)
+    photo_url = db.Column(db.Text, nullable=True)
     
     max_participants = db.Column(db.Integer, default=2)  # Aberto para 2 ou mais pessoas
     
@@ -44,6 +45,7 @@ class Activity(db.Model):
             'category': self.category,
             'title': self.title,
             'description': self.description,
+            'photo_url': self.photo_url,
             'location_name': self.location_name or 'São Paulo, SP',
             'scheduled_time': self.scheduled_time or 'Hoje mais tarde',
             'latitude': self.latitude,

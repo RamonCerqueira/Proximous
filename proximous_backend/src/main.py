@@ -170,6 +170,13 @@ def sync_database_schema():
                     print("Schema Sync (activities): Added scheduled_time column")
                 except Exception as q_err:
                     db.session.rollback()
+            if 'photo_url' not in act_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE activities ADD COLUMN photo_url TEXT"))
+                    db.session.commit()
+                    print("Schema Sync (activities): Added photo_url column")
+                except Exception as q_err:
+                    db.session.rollback()
 
         # 3. Activity_participants table
         if 'activity_participants' in table_names:

@@ -390,20 +390,11 @@ const Discover = () => {
       <CreateActivityModal
         show={showCreateActivityModal}
         onClose={() => setShowCreateActivityModal(false)}
-        newActTitle={newActTitle}
-        setNewActTitle={setNewActTitle}
-        newActCategory={newActCategory}
-        setNewActCategory={setNewActCategory}
-        newActLocation={newActLocation}
-        setNewActLocation={setNewActLocation}
-        newActTime={newActTime}
-        setNewActTime={setNewActTime}
-        newActMaxParticipants={newActMaxParticipants}
-        setNewActMaxParticipants={setNewActMaxParticipants}
-        newActDesc={newActDesc}
-        setNewActDesc={setNewActDesc}
-        onCreate={handleCreateActivity}
-        isCreating={isCreatingAct}
+        availableUsers={availableUsers}
+        onCreate={async (activityData) => {
+          await activitiesAPI.create(activityData);
+          if (fetchAvailableUsersAndActivities) fetchAvailableUsersAndActivities();
+        }}
       />
 
     </div>

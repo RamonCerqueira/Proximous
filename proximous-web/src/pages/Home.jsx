@@ -307,60 +307,92 @@ const Home = () => {
         </div>
       )}
 
-      {/* 3. ENCONTROS & ATIVIDADES EM ALTA (CONVITES ESPONTÂNEOS) */}
-      <div className="space-y-4 pt-2">
+      {/* 3. ENCONTROS & ATIVIDADES EM ALTA (CONVITES ESPONTÂNEOS) - 2 POR LINHA NO MOBILE */}
+      <div className="space-y-3.5 pt-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Coffee className="w-5 h-5 text-[#35E38A]" />
-            <h2 className="text-lg sm:text-xl font-extrabold text-white">Convites & Atividades Próximas</h2>
+            <div className="p-1.5 rounded-xl bg-[#35E38A]/15 border border-[#35E38A]/30">
+              <Zap className="w-4 h-4 text-[#35E38A]" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-xl font-black text-white flex items-center gap-1.5">
+                Convites & Rolês
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">
+                  Ao Vivo
+                </span>
+              </h2>
+            </div>
           </div>
-          <Link to="/activities" className="text-xs font-bold text-[#35E38A] hover:underline flex items-center gap-1">
+          <Link to="/now" className="text-xs font-black text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 transition-all">
             Ver todas <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {displayActivities.map((act) => (
-            <motion.div 
-              key={act.id}
-              whileHover={{ y: -2 }}
-              className="bg-[#100D21] border border-[#30204D] hover:border-[#35E38A] p-5 rounded-[22px] shadow-xl space-y-3 transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="bg-[#35E38A]/20 text-[#35E38A] border border-[#35E38A]/30 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  ☕ {act.category || 'Atividade'}
-                </span>
-                <span className="text-[11px] text-[#AAA5BA] font-medium flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-[#35E38A]" />
-                  {act.scheduled_time}
-                </span>
-              </div>
+        {/* Responsive Grid: 2 per line on mobile / iPhone, 3 on md, 4 on lg */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
+          {displayActivities.map((act) => {
+            const badge = getActivityBadge(act.category, act.title);
+            return (
+              <motion.div 
+                key={act.id}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 hover:border-purple-500/50 bg-gradient-to-b from-[#181030]/95 via-[#100B22]/95 to-[#080614] p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.5)] group hover:shadow-[0_12px_28px_rgba(155,32,240,0.25)]"
+              >
+                {/* Ambient top light flare */}
+                <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${badge.glow} to-transparent rounded-bl-full pointer-events-none`} />
 
-              <h4 className="font-extrabold text-white text-base leading-tight">
-                "{act.title}"
-              </h4>
+                {/* Top: Category Tag + Time Status */}
+                <div className="space-y-2 relative z-10">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 border ${badge.badgeClass}`}>
+                      <span>{badge.icon}</span>
+                      <span className="truncate max-w-[65px] sm:max-w-none">{badge.label}</span>
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                      <span className="truncate max-w-[55px] sm:max-w-none">
+                        {act.scheduled_time ? act.scheduled_time.replace(/Hoje às |Hoje as /i, '').trim() : 'Hoje'}
+                      </span>
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#30204D]">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={act.creator?.profile_photo_url || generateAvatarUrl(act.creator?.name || 'Proximous')}
-                    alt="Criador"
-                    className="w-8 h-8 rounded-full object-cover border border-[#35E38A]"
-                  />
-                  <span className="text-xs font-semibold text-slate-300">
-                    {act.creator?.name || 'Membro'}, {act.location_name || 'São Paulo'}
-                  </span>
+                  {/* Title */}
+                  <h4 className="font-extrabold text-white text-xs sm:text-sm leading-snug line-clamp-2 min-h-[2.4rem] group-hover:text-purple-200 transition-colors">
+                    "{act.title}"
+                  </h4>
+
+                  {/* Location Tag */}
+                  <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-zinc-400">
+                    <MapPin className="w-3 h-3 text-purple-400 shrink-0" />
+                    <span className="truncate">{act.location_name || 'Salvador'}</span>
+                  </div>
                 </div>
 
-                <Button
-                  onClick={() => navigate('/activities')}
-                  className="bg-gradient-to-r from-[#10B981] to-[#35E38A] text-white font-extrabold text-xs px-4 py-1.5 rounded-xl shadow-md"
-                >
-                  Quero ir 🙋‍♂️
-                </Button>
-              </div>
-            </motion.div>
-          ))}
+                {/* Bottom: Creator Avatar & Compact Action Button */}
+                <div className="pt-2.5 mt-2 border-t border-white/5 space-y-2 relative z-10">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <img
+                      src={act.creator?.profile_photo_url || generateAvatarUrl(act.creator?.name || 'Proximous')}
+                      alt="Criador"
+                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover ring-1 ring-purple-500/40 shrink-0"
+                    />
+                    <span className="text-[10px] sm:text-xs font-semibold text-zinc-300 truncate">
+                      {act.creator?.name || 'Membro'}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/now')}
+                    className="w-full py-1.5 sm:py-2 px-2 rounded-xl bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] hover:opacity-95 text-white font-black text-[10px] sm:text-xs shadow-[0_0_15px_rgba(212,20,168,0.35)] flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  >
+                    <span>Quero ir</span>
+                    <span>⚡</span>
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
