@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MapPin, Sparkles } from 'lucide-react';
+import { formatDistance } from '@/lib/auth';
 
 const ProfileGrid = ({ users, loading, onSwipe, onResetFilters, onOpenFilterModal }) => {
   if (loading) {
@@ -82,7 +83,7 @@ const ProfileGrid = ({ users, loading, onSwipe, onResetFilters, onOpenFilterModa
 
                 <p className="text-[10px] text-slate-300 font-bold flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-purple-400 flex-shrink-0" />
-                  <span className="truncate">{u.distance_range || 'São Paulo'}</span>
+                  <span className="truncate">{(u.distance !== undefined || u.distance_km !== undefined) ? `${formatDistance(u.distance ?? u.distance_km)} de você` : (u.distance_range || u.location_city || 'Sua Região')}</span>
                 </p>
 
                 {/* Quick Connect Actions */}

@@ -130,6 +130,7 @@ export const uploadAPI = {
 // Activities API (Modo AGORA)
 export const activitiesAPI = {
   getNearby: (params) => api.get('/activities/nearby', { params }),
+  getCategories: () => api.get('/activities/categories'),
   create: (data) => api.post('/activities', data),
   join: (activityId) => api.post(`/activities/${activityId}/join`),
   leave: (activityId) => api.delete(`/activities/${activityId}/leave`),

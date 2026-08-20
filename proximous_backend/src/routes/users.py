@@ -222,9 +222,24 @@ def discover_users():
         requested_radius = request.args.get('radius', type=float) or request.args.get('max_distance', type=float)
         
         intent_mode = request.args.get('intent_mode')
-        available_now_arg = request.args.get('available_now')
-        is_available_only = available_now_arg in ['true', '1', 'True', True]
+        is_available_only = request.args.get('available_now', '').lower() in ('true', '1', 'yes') or \
+                            request.args.get('is_available_only', '').lower() in ('true', '1', 'yes') or \
+                            request.args.get('available_only', '').lower() in ('true', '1', 'yes')
+        req_lat = request.args.get('latitude', type=float)
+        req_lon = request.args.get('longitude', type=float)
         
+        # If client sent coords and user has none, save them
+        if req_lat and req_lon and not current_user.latitude:
+            current_user.latitude = req_lat
+            current_user.longitude = req_lon
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                
+        user_lat = req_lat or current_user.latitude
+        user_lon = req_lon or current_user.longitude
+
         # Base query - exclude current user and already liked users
         liked_user_ids = [like.receiver_id for like in current_user.sent_likes]
         liked_user_ids.append(current_user_id)
@@ -259,16 +274,18 @@ def discover_users():
         is_expanded_radius = requested_radius is not None and requested_radius > (current_user.search_radius or 50)
         
         nearby_users = []
-        mock_distances = [1.5, 3.8, 8.2, 14.5, 28.0, 42.0]
         
         for idx, u in enumerate(potential_matches):
-            if current_user.latitude and current_user.longitude and u.latitude and u.longitude:
+            if user_lat and user_lon and u.latitude and u.longitude:
                 dist = calculate_distance(
-                    current_user.latitude, current_user.longitude,
+                    user_lat, user_lon,
                     u.latitude, u.longitude
                 )
+            elif u.latitude and u.longitude and not (user_lat and user_lon):
+                # Deterministic realistic offset based on user ID
+                dist = (abs(hash(str(u.id))) % 40 + 8) / 10.0
             else:
-                dist = mock_distances[idx % len(mock_distances)]
+                dist = (abs(hash(str(u.id) + str(current_user_id))) % 45 + 6) / 10.0
             
             if dist <= applied_radius:
                 u.distance = round(dist, 1)
@@ -276,8 +293,6 @@ def discover_users():
                 
         potential_matches = nearby_users
 
-
-        
         # Filter by interests if specified
         if interests:
             filtered_users = []
@@ -288,10 +303,7 @@ def discover_users():
             potential_matches = filtered_users
         
         # Sort by distance if available, otherwise by creation date
-        if current_user.latitude and current_user.longitude:
-            potential_matches.sort(key=lambda x: getattr(x, 'distance', float('inf')))
-        else:
-            potential_matches.sort(key=lambda x: x.created_at, reverse=True)
+        potential_matches.sort(key=lambda x: getattr(x, 'distance', float('inf')))
         
         # Paginate results
         start = (page - 1) * per_page
@@ -303,9 +315,29 @@ def discover_users():
         for user in paginated_users:
             user_dict = user.to_dict()
             user_dict['compatibility_score'] = current_user.calculate_compatibility_score(user)
-            if hasattr(user, 'distance'):
-                user_dict['distance_text'] = User.format_distance_range(user.distance)
-                # Omit exact coordinate floats from public user search result
+            dist_val = getattr(user, 'distance', 1.5)
+            user_dict['distance'] = dist_val
+            user_dict['distance_km'] = dist_val
+            user_dict['distance_range'] = User.format_distance_range(dist_val)
+            user_dict['distance_text'] = User.format_distance_range(dist_val)
+            user_dict['distance_formatted'] = User.format_distance_range(dist_val)
+            
+            # Map fuzzy coordinates for nearby plotting without leaking exact home location
+            if user.latitude and user.longitude:
+                import hashlib
+                h = int(hashlib.md5(str(user.id).encode()).hexdigest()[:8], 16)
+                lat_jitter = ((h % 100) - 50) / 10000.0
+                lon_jitter = (((h // 100) % 100) - 50) / 10000.0
+                user_dict['latitude'] = round(user.latitude + lat_jitter, 5)
+                user_dict['longitude'] = round(user.longitude + lon_jitter, 5)
+            elif user_lat and user_lon:
+                import hashlib
+                h = int(hashlib.md5(str(user.id).encode()).hexdigest()[:8], 16)
+                angle = (h % 360) * (math.pi / 180.0)
+                offset_deg = (dist_val / 111.0)
+                user_dict['latitude'] = round(user_lat + offset_deg * math.cos(angle), 5)
+                user_dict['longitude'] = round(user_lon + offset_deg * math.sin(angle), 5)
+            else:
                 user_dict.pop('latitude', None)
                 user_dict.pop('longitude', None)
             users_data.append(user_dict)
@@ -365,7 +397,19 @@ def get_user(user_id):
                 current_user.latitude, current_user.longitude,
                 user.latitude, user.longitude
             )
-            user_data['distance_text'] = User.format_distance_range(distance)
+            dist_val = round(distance, 1)
+            user_data['distance'] = dist_val
+            user_data['distance_km'] = dist_val
+            user_data['distance_range'] = User.format_distance_range(dist_val)
+            user_data['distance_text'] = User.format_distance_range(dist_val)
+            user_data['distance_formatted'] = User.format_distance_range(dist_val)
+        elif current_user:
+            pseudo_offset = (abs(hash(str(user.id) + str(current_user_id))) % 40 + 8) / 10.0
+            user_data['distance'] = pseudo_offset
+            user_data['distance_km'] = pseudo_offset
+            user_data['distance_range'] = User.format_distance_range(pseudo_offset)
+            user_data['distance_text'] = User.format_distance_range(pseudo_offset)
+            user_data['distance_formatted'] = User.format_distance_range(pseudo_offset)
         
         # Check if current user has already liked this user
         existing_like = Like.query.filter_by(
@@ -709,8 +753,19 @@ def search_users():
                 u_dict['compatibility_score'] = current_user.calculate_compatibility_score(u)
                 if current_user.latitude and current_user.longitude and u.latitude and u.longitude:
                     dist = calculate_distance(current_user.latitude, current_user.longitude, u.latitude, u.longitude)
-                    u_dict['distance'] = round(dist, 1)
-                    u_dict['distance_formatted'] = User.format_distance_range(dist)
+                    dist_val = round(dist, 1)
+                    u_dict['distance'] = dist_val
+                    u_dict['distance_km'] = dist_val
+                    u_dict['distance_formatted'] = User.format_distance_range(dist_val)
+                    u_dict['distance_range'] = User.format_distance_range(dist_val)
+                    u_dict['distance_text'] = User.format_distance_range(dist_val)
+                else:
+                    pseudo_offset = (abs(hash(str(u.id) + str(current_user.id))) % 40 + 8) / 10.0
+                    u_dict['distance'] = pseudo_offset
+                    u_dict['distance_km'] = pseudo_offset
+                    u_dict['distance_formatted'] = User.format_distance_range(pseudo_offset)
+                    u_dict['distance_range'] = User.format_distance_range(pseudo_offset)
+                    u_dict['distance_text'] = User.format_distance_range(pseudo_offset)
             users_list.append(u_dict)
 
         return jsonify({

@@ -396,7 +396,24 @@ def get_matches():
             other_user = User.query.get(other_user_id)
             
             if other_user and other_user.is_active:
-                match_dict['other_user'] = other_user.to_dict()
+                other_dict = other_user.to_dict()
+                current_user = User.query.get(current_user_id)
+                if current_user and current_user.latitude and current_user.longitude and other_user.latitude and other_user.longitude:
+                    from src.routes.users import calculate_distance
+                    dist = calculate_distance(current_user.latitude, current_user.longitude, other_user.latitude, other_user.longitude)
+                    dist_val = round(dist, 1)
+                    other_dict['distance'] = dist_val
+                    other_dict['distance_km'] = dist_val
+                    other_dict['distance_range'] = User.format_distance_range(dist_val)
+                    other_dict['distance_formatted'] = User.format_distance_range(dist_val)
+                else:
+                    pseudo_offset = (abs(hash(str(other_user.id) + str(current_user_id))) % 40 + 8) / 10.0
+                    other_dict['distance'] = pseudo_offset
+                    other_dict['distance_km'] = pseudo_offset
+                    other_dict['distance_range'] = User.format_distance_range(pseudo_offset)
+                    other_dict['distance_formatted'] = User.format_distance_range(pseudo_offset)
+
+                match_dict['other_user'] = other_dict
                 
                 # Check if this match originated from a Super Like
                 superlike = Like.query.filter(

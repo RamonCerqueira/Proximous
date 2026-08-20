@@ -254,19 +254,15 @@ class User(db.Model):
 
     @staticmethod
     def format_distance_range(distance_km):
-        """Format distance in approximate ranges to preserve user privacy (anti-trilateration)"""
+        """Format distance in approximate ranges or clean km format"""
         if distance_km is None or distance_km == float('inf'):
-            return "Localização desconhecida"
-        if distance_km < 1.0:
+            return "Perto de você"
+        if distance_km < 0.5:
+            return "A menos de 500m"
+        elif distance_km < 1.0:
             return "A menos de 1 km"
-        elif distance_km < 2.0:
-            return "A cerca de 1 a 2 km"
-        elif distance_km < 5.0:
-            return f"A cerca de {int(distance_km)} km"
-        elif distance_km < 10.0:
-            return "A menos de 10 km"
         else:
-            return f"A cerca de {int(round(distance_km, -1))} km"
+            return f"{distance_km:.1f} km".replace('.', ',') + " de você"
 
     def to_dict(self, include_private=False):
         data = {
@@ -500,6 +496,10 @@ class Notification(db.Model):
 
     actor = db.relationship('User', foreign_keys=[actor_id])
 
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -527,6 +527,10 @@ class EmpathyTransaction(db.Model):
     category = db.Column(db.String(50), nullable=False)  # 'moments', 'icebreaker', 'achievement', 'profile', 'interaction'
     description = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def to_dict(self):
         return {

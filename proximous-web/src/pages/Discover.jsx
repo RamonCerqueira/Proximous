@@ -77,17 +77,33 @@ const Discover = () => {
   const [isCreatingAct, setIsCreatingAct] = useState(false);
 
 
+  const [userCoords, setUserCoords] = useState(null);
+
+  // Geolocation detection
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserCoords({ latitude, longitude });
+        },
+        (err) => console.warn('Geolocation notice:', err),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    }
+  }, []);
+
   // Load profiles on filter changes
   useEffect(() => {
     fetchUsers();
-  }, [radius, genderFilter, socialStyleFilter, intentMode, selectedActivityCategory]);
+  }, [radius, genderFilter, socialStyleFilter, intentMode, selectedActivityCategory, userCoords]);
 
   // Load Radar Ao Vivo data when active
   useEffect(() => {
     if (viewMode === 'now') {
       fetchAvailableUsersAndActivities();
     }
-  }, [viewMode, radius]);
+  }, [viewMode, radius, userCoords]);
 
   const fetchUsers = async () => {
     try {
@@ -99,6 +115,10 @@ const Discover = () => {
         social_style: socialStyleFilter !== 'all' ? socialStyleFilter : undefined,
         intent_mode: intentMode !== 'all' ? intentMode : undefined,
       };
+      if (userCoords?.latitude && userCoords?.longitude) {
+        params.latitude = userCoords.latitude;
+        params.longitude = userCoords.longitude;
+      }
       const response = await usersAPI.discover(params);
       let list = response.data.users || [];
 
@@ -123,9 +143,17 @@ const Discover = () => {
   const fetchAvailableUsersAndActivities = async () => {
     try {
       setLoadingActivities(true);
+      const discoverParams = { radius, available_now: true };
+      const actParams = { radius };
+      if (userCoords?.latitude && userCoords?.longitude) {
+        discoverParams.latitude = userCoords.latitude;
+        discoverParams.longitude = userCoords.longitude;
+        actParams.latitude = userCoords.latitude;
+        actParams.longitude = userCoords.longitude;
+      }
       const [availRes, actRes] = await Promise.all([
-        usersAPI.discover({ radius, available_now: true }),
-        activitiesAPI.getNearby({ radius }),
+        usersAPI.discover(discoverParams),
+        activitiesAPI.getNearby(actParams),
       ]);
       setAvailableUsers(availRes.data.users || []);
       setActivitiesList(actRes.data.activities || []);

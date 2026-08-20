@@ -15,15 +15,20 @@ import {
   Calendar 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatDistance } from '@/lib/auth';
 
 const UserProfileModal = ({ user, isOpen, onClose, onLike }) => {
   const navigate = useNavigate();
 
   if (!isOpen || !user) return null;
 
-  const photos = user.photos && user.photos.length > 0
-    ? user.photos
+  const photos = user.photos && user.photos.length > 0 
+    ? user.photos 
     : [user.profile_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600'];
+
+  const distDisplay = user.distance !== undefined 
+    ? formatDistance(user.distance) 
+    : (user.distance_km !== undefined ? formatDistance(user.distance_km) : null);
 
   const compatibilityScore = user.empathy_score || 88;
 
@@ -82,7 +87,7 @@ const UserProfileModal = ({ user, isOpen, onClose, onLike }) => {
               <p className="text-xs text-gray-300 font-medium flex items-center gap-1 mt-1">
                 <MapPin className="h-3.5 w-3.5 text-purple-400" />
                 <span>{user.location_city || 'São Paulo'}</span>
-                {user.distance_km && <span>• {Math.round(user.distance_km)} km de você</span>}
+                {distDisplay ? <span>• {distDisplay} de você</span> : (user.distance_range ? <span>• {user.distance_range}</span> : null)}
               </p>
             </div>
           </div>

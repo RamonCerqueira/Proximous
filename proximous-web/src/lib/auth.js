@@ -58,9 +58,15 @@ export const formatUserAge = (age) => {
 };
 
 export const formatDistance = (distance) => {
-  if (distance === undefined || distance === null) return '';
-  if (distance < 1) return 'Muito próximo';
-  return `${distance}km`;
+  if (distance === undefined || distance === null || distance === '') return '';
+  if (typeof distance === 'string') {
+    if (distance.includes('km') || distance.includes('m')) return distance;
+  }
+  const num = typeof distance === 'number' ? distance : parseFloat(distance);
+  if (isNaN(num)) return typeof distance === 'string' ? distance : '';
+  if (num < 0.5) return 'A menos de 500m';
+  if (num < 1) return `${(num * 1000).toFixed(0)}m`;
+  return `${num.toFixed(1).replace('.', ',')} km`;
 };
 
 export const getPersonalityTagColor = (tag) => {

@@ -40,14 +40,33 @@ const Home = () => {
   const [showFullMapModal, setShowFullMapModal] = useState(false);
 
   useEffect(() => {
-    fetchHomeData();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          usersAPI.updateProfile({ latitude, longitude }).catch(() => {});
+          fetchHomeData({ latitude, longitude });
+        },
+        () => {
+          fetchHomeData();
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    } else {
+      fetchHomeData();
+    }
   }, []);
 
-  const fetchHomeData = async () => {
+  const fetchHomeData = async (coords = null) => {
     try {
       setLoading(true);
+      const params = { radius: 15, limit: 10 };
+      if (coords?.latitude && coords?.longitude) {
+        params.latitude = coords.latitude;
+        params.longitude = coords.longitude;
+      }
       const [discoverRes, actRes] = await Promise.allSettled([
-        usersAPI.discover({ radius: 15, limit: 10 }),
+        usersAPI.discover(params),
         activitiesAPI.getNearby({ radius: 15 })
       ]);
 
@@ -197,7 +216,7 @@ const Home = () => {
                 {u.name.split(' ')[0]}
               </span>
               <span className="text-[10px] text-slate-400 font-medium">
-                {u.distance ? `${u.distance} km` : '1.2 km'}
+                {formatDistance(u.distance ?? u.distance_km) || u.distance_range || 'Perto de você'}
               </span>
             </motion.div>
           ))}
@@ -234,7 +253,9 @@ const Home = () => {
                 </Badge>
               </div>
               <div className="absolute bottom-3 left-3 right-3 text-white">
-                <p className="text-xs font-bold text-slate-300">📍 {featuredUser.distance ? `${featuredUser.distance} km` : '1.2 km'} de você</p>
+                <p className="text-xs font-bold text-slate-300">
+                  📍 {formatDistance(featuredUser.distance ?? featuredUser.distance_km) ? `${formatDistance(featuredUser.distance ?? featuredUser.distance_km)} de você` : (featuredUser.distance_range || 'Perto de você')}
+                </p>
               </div>
             </div>
 
@@ -386,7 +407,7 @@ const Home = () => {
                 <h2 className="text-2xl font-black">{selectedUser.name}, {selectedUser.age || 24}</h2>
                 <p className="text-xs text-slate-300 flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-[#FF4FA3]" />
-                  {selectedUser.distance ? `${selectedUser.distance} km de você` : 'São Paulo, SP'}
+                  {formatDistance(selectedUser.distance ?? selectedUser.distance_km) ? `${formatDistance(selectedUser.distance ?? selectedUser.distance_km)} de você` : (selectedUser.distance_range || selectedUser.location_city || 'Sua Região')}
                 </p>
               </div>
             </div>

@@ -359,6 +359,10 @@ class AdImpression(db.Model):
     advertisement = db.relationship('Advertisement', backref='impression_records')
     user = db.relationship('User', backref='ad_impressions')
 
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
     def record_click(self):
         if not self.clicked:
             self.clicked = True

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import UserProfileModal from '@/components/UserProfileModal';
 import { useAuth } from '@/hooks/useAuth';
+import { formatDistance } from '@/lib/auth';
 
 const CardItem = ({
   currentUser,
@@ -164,8 +165,8 @@ const CardItem = ({
           <p className="text-xs text-purple-200 font-extrabold flex items-center gap-1.5 mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
             <MapPin className="h-4 w-4 text-purple-400" />
             <span>{displayCity}</span>
-            {currentUser.distance_km && (
-              <span className="text-gray-300 font-bold">• {Math.round(currentUser.distance_km)} km de você</span>
+            {(currentUser.distance !== undefined || currentUser.distance_km !== undefined) && (
+              <span className="text-gray-300 font-bold">• {formatDistance(currentUser.distance ?? currentUser.distance_km)} de você</span>
             )}
           </p>
         </div>

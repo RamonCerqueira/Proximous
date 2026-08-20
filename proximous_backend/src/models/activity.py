@@ -10,7 +10,7 @@ class Activity(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     
-    category = db.Column(db.String(30), nullable=False)  # 'coffee', 'running', 'cinema', 'games', 'drinks', 'study', 'other'
+    category = db.Column(db.String(100), nullable=False)  # Custom dynamic category (e.g. '🎾 Beach Tennis', '☕ Café & Papo', etc.)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     location_name = db.Column(db.String(150), nullable=True)

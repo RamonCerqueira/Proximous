@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usersAPI, activitiesAPI } from '@/lib/api';
+import { formatDistance } from '@/lib/auth';
 
 // Helper to calculate exact distance between two lat/lng coordinates in km (Haversine formula)
 const calculateHaversine = (lat1, lon1, lat2, lon2) => {
@@ -503,7 +504,7 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
                   <h4 className="font-bold text-gray-900 text-sm">{user.name}, {user.age || 24}</h4>
                   <p className="text-[11px] text-[#D414A8] font-bold mb-1 flex items-center justify-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    {user.distance || 1.2} km de você
+                    {user.distance !== undefined ? `${formatDistance(user.distance)} de você` : (user.distance_range || 'Perto de você')}
                   </p>
                   <p className="text-xs text-slate-600 line-clamp-2 mb-3 leading-tight font-normal">
                     {user.bio || 'Adoro conversas sinceras e momentos espontâneos.'}

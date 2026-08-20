@@ -303,22 +303,52 @@ export const CreateActivityModal = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="font-extrabold text-foreground block mb-1">Categoria</label>
-                <select
-                  value={newActCategory}
-                  onChange={(e) => setNewActCategory(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-background border border-border text-foreground font-semibold text-xs focus:ring-2 focus:ring-purple-500/50"
-                >
-                  <option value="coffee">☕ Café & Conversa</option>
-                  <option value="drinks">🍻 Drinks & Happy Hour</option>
-                  <option value="sports">🏃 Esportes & Treino</option>
-                  <option value="culture">🎭 Cinema & Cultura</option>
-                  <option value="games">🎮 Games & Hobbies</option>
-                </select>
+            <div>
+              <label className="font-extrabold text-foreground block mb-1">
+                Categoria / Tag do Rolê (Totalmente Livre)
+              </label>
+              <Input
+                value={newActCategory}
+                onChange={(e) => setNewActCategory(e.target.value)}
+                placeholder="Ex: 🎾 Beach Tennis, 🎸 Música, 🐶 Pets, 🍣 Sushi..."
+                className="rounded-xl bg-background border border-border text-foreground font-semibold text-xs placeholder:text-muted-foreground/60 focus:border-purple-500 mb-2"
+              />
+              
+              {/* Quick Suggestion Chips */}
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto scrollbar-none p-1 bg-accent/30 rounded-xl border border-border">
+                {[
+                  '☕ Café & Papo',
+                  '🍻 Drinks & Bar',
+                  '🎾 Beach Tennis',
+                  '🏃 Corrida & Treino',
+                  '🍿 Cinema & Pipoca',
+                  '🍕 Pizza & Gastro',
+                  '🐶 Passeio com Pets',
+                  '🎸 Música & Jam',
+                  '🎮 Board Games & Jogos',
+                  '🍣 Rodízio & Sushi',
+                  '🎨 Museu & Arte',
+                  '🛹 Skate no Parque',
+                  '🌿 Trilha & Natureza',
+                  '📚 Estudo & Coworking'
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setNewActCategory(chip)}
+                    className={`text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all border ${
+                      newActCategory === chip
+                        ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                        : 'bg-background hover:bg-accent border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {chip}
+                  </button>
+                ))}
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="font-extrabold text-foreground block mb-1">Vagas Abertas</label>
                 <select
@@ -330,20 +360,21 @@ export const CreateActivityModal = ({
                   <option value={3}>👥 Aberto p/ 3 pessoas</option>
                   <option value={4}>👥 Aberto p/ 4 pessoas</option>
                   <option value={6}>👥 Grupo (6 pessoas)</option>
+                  <option value={10}>👥 Grupo Grande (10 pessoas)</option>
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="font-extrabold text-foreground block mb-1 flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5 text-purple-500" /> Horário do Encontro
-              </label>
-              <Input
-                value={newActTime}
-                onChange={(e) => setNewActTime(e.target.value)}
-                placeholder="Ex: Hoje às 19:30"
-                className="rounded-xl bg-background border border-border text-foreground font-semibold text-sm placeholder:text-muted-foreground/60 focus:border-purple-500"
-              />
+              <div>
+                <label className="font-extrabold text-foreground block mb-1 flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5 text-purple-500" /> Horário
+                </label>
+                <Input
+                  value={newActTime}
+                  onChange={(e) => setNewActTime(e.target.value)}
+                  placeholder="Ex: Hoje às 19:30"
+                  className="rounded-xl bg-background border border-border text-foreground font-semibold text-xs placeholder:text-muted-foreground/60 focus:border-purple-500"
+                />
+              </div>
             </div>
 
             {/* Interactive Leaflet GPS Location Picker Map with Autocomplete */}
