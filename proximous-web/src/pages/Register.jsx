@@ -25,12 +25,13 @@ import {
   Clock,
   ShieldCheck
 } from 'lucide-react';
-import { authAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { setToken, setUser } from '@/lib/auth';
 
 const PIX_CPF_KEY = '03207834566';
 
 const Register = () => {
+  const { register: authRegister } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -71,18 +72,17 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await authAPI.register(formData);
-      
-      if (response.data.access_token) {
-        setToken(response.data.access_token);
-        setUser(response.data.user);
-        setRegisteredUser(response.data.user);
+      const result = await authRegister(formData);
+      if (result.success) {
+        setRegisteredUser(result.user);
         // Show post-registration VIP / Free Plan Selection Modal
         setShowPlanModal(true);
+      } else {
+        setError(result.error || 'Erro ao criar conta. Tente novamente.');
       }
-    } catch (error) {
-      console.error('Register error:', error);
-      setError(error.response?.data?.error || 'Erro ao criar conta. Tente novamente.');
+    } catch (err) {
+      console.error('Register error:', err);
+      setError('Erro ao criar conta. Tente novamente.');
     } finally {
       setLoading(false);
     }

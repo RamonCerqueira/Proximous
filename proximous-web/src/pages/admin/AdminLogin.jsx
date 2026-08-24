@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../../lib/api';
 import { validateEmail } from '../../lib/auth';
 
@@ -8,6 +9,7 @@ const AdminLogin = () => {
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -48,15 +50,20 @@ const AdminLogin = () => {
     try {
       const response = await authAPI.adminLogin(formData);
       
-      if (response.data.success) {
-        // Store admin token
-        localStorage.setItem('adminToken', response.data.access_token);
-        localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      if (response.data.success || response.data.access_token) {
+        const token = response.data.access_token;
+        const adminUser = response.data.user || response.data.admin || { type: 'admin', email: formData.email };
+        
+        // Store in both admin and standard proximous auth keys
+        localStorage.setItem('proximous_token', token);
+        localStorage.setItem('proximous_user', JSON.stringify(adminUser));
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminUser', JSON.stringify(adminUser));
         
         // Redirect to admin dashboard
         navigate('/admin/dashboard');
       } else {
-        setErrors({ general: response.data.message });
+        setErrors({ general: response.data.message || 'Credenciais inválidas' });
       }
     } catch (error) {
       console.error('Admin login error:', error);
@@ -128,19 +135,33 @@ const AdminLogin = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Senha
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className={`appearance-none relative block w-full px-3 py-3 border ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                placeholder="Sua senha administrativa"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  className={`appearance-none relative block w-full px-3 py-3 pr-10 border ${
+                    errors.password ? 'border-red-300' : 'border-gray-300'
+                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                  placeholder="Sua senha administrativa"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ocultar senha" : "Show senha"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}

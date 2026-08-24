@@ -27,14 +27,39 @@ const Messages = () => {
     fetchConversations();
   }, []);
 
-  // Auto-select conversation when navigated from another page (e.g., ModoAgora chat button)
+  // Auto-select conversation when navigated from another page (e.g., ModoAgora chat button or Matches)
   useEffect(() => {
-    const targetUserId = location.state?.targetUserId;
-    if (!targetUserId || conversations.length === 0) return;
-    const match = conversations.find(
-      (c) => String(c.id) === String(targetUserId) || String(c.user_id) === String(targetUserId)
-    );
-    if (match) setSelectedConversation(match);
+    const targetUserId = location.state?.targetUserId || location.state?.selectedUserId;
+    if (!targetUserId) return;
+
+    if (conversations.length > 0) {
+      const match = conversations.find(
+        (c) => String(c.id) === String(targetUserId) || String(c.user_id) === String(targetUserId)
+      );
+      if (match) {
+        setSelectedConversation(match);
+        return;
+      }
+    }
+
+    if (location.state?.targetUser) {
+      const u = location.state.targetUser;
+      setSelectedConversation({
+        id: u.id,
+        user_id: u.id,
+        name: u.name,
+        profile_photo_url: u.profile_photo_url,
+        is_online: u.is_online ?? true,
+        last_seen: u.last_seen || new Date().toISOString()
+      });
+    } else if (targetUserId) {
+      setSelectedConversation({
+        id: targetUserId,
+        user_id: targetUserId,
+        name: 'Conversa',
+        is_online: true
+      });
+    }
   }, [conversations, location.state]);
 
   // Handle room joining and real-time listeners on active conversation change

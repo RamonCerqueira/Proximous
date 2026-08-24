@@ -46,7 +46,7 @@ const NotificationsDrawer = ({ isOpen, onClose, onUnreadChange }) => {
   const handleMarkAllRead = async () => {
     try {
       await notificationsAPI.markAllRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: True })));
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       if (onUnreadChange) onUnreadChange(0);
     } catch (err) {
       console.error('Error marking all as read:', err);

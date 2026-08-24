@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { usersAPI } from '../lib/api';
+import { usersAPI, authAPI } from '../lib/api';
 import { 
   User, 
   Lock, 
@@ -26,6 +26,11 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('account');
   const [loading, setLoading] = useState(false);
 
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Privacy states
   const [privacy, setPrivacy] = useState({
     hideDistance: user?.privacy_settings?.hide_distance || false,
@@ -38,12 +43,11 @@ const Settings = () => {
   const [notifications, setNotifications] = useState({
     newMatches: true,
     newMessages: true,
-    likes: true,
-    promotions: false,
-    emailAlerts: true,
+    activityInvites: true,
+    marketingEmails: false,
   });
 
-  // Password change states
+  // Password form state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -72,17 +76,22 @@ const Settings = () => {
       toast.error('As novas senhas não coincidem!');
       return;
     }
-    if (passwordForm.newPassword.length < 6) {
-      toast.error('A senha deve ter no mínimo 6 caracteres.');
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('A senha deve ter no mínimo 8 caracteres com letras e números.');
       return;
     }
 
     setLoading(true);
     try {
+      await authAPI.changePassword({
+        current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword
+      });
       toast.success('Senha alterada com sucesso!');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error('Erro ao alterar senha. Verifique sua senha atual.');
+      const msg = err.response?.data?.error || 'Erro ao alterar senha. Verifique sua senha atual.';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -349,35 +358,68 @@ const Settings = () => {
                 <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Senha Atual</label>
-                    <input
-                      type="password"
-                      required
-                      value={passwordForm.currentPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        required
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showCurrentPassword ? "Ocultar senha atual" : "Mostrar senha atual"}
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nova Senha</label>
-                    <input
-                      type="password"
-                      required
-                      value={passwordForm.newPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        required
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        placeholder="Mínimo 8 caracteres"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showNewPassword ? "Ocultar nova senha" : "Mostrar nova senha"}
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirmar Nova Senha</label>
-                    <input
-                      type="password"
-                      required
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        placeholder="Repita a nova senha"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
 
                   <button

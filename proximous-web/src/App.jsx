@@ -1,37 +1,37 @@
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import { ThemeProvider } from './hooks/useTheme.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-// Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Home from './pages/Home';
-import Discover from './pages/Discover';
-import ModoAgora from './pages/ModoAgora';
-import ActivitiesExplorer from './pages/ActivitiesExplorer';
-import MomentsFeed from './pages/MomentsFeed';
-import Matches from './pages/Matches';
+// Lazy Loaded Pages
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Home = lazy(() => import('./pages/Home'));
+const Discover = lazy(() => import('./pages/Discover'));
+const ModoAgora = lazy(() => import('./pages/ModoAgora'));
+const ActivitiesExplorer = lazy(() => import('./pages/ActivitiesExplorer'));
+const MomentsFeed = lazy(() => import('./pages/MomentsFeed'));
+const Matches = lazy(() => import('./pages/Matches'));
+const Messages = lazy(() => import('./pages/Messages'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Premium = lazy(() => import('./pages/Premium'));
+const Help = lazy(() => import('./pages/Help'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Advertising = lazy(() => import('./pages/Advertising'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const Search = lazy(() => import('./pages/Search'));
+const Achievements = lazy(() => import('./pages/Achievements'));
 
-import Messages from './pages/Messages';
-import Profile from './pages/Profile';
-import Premium from './pages/Premium';
-import Help from './pages/Help';
-import Contact from './pages/Contact';
-import Advertising from './pages/Advertising';
-import Settings from './pages/Settings';
-import Notifications from './pages/Notifications';
-import PublicProfile from './pages/PublicProfile';
-import Search from './pages/Search';
-import Achievements from './pages/Achievements';
-
-// Admin Pages
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminModeration from './pages/admin/AdminModeration';
-import AdminSettings from './pages/admin/AdminSettings';
+// Lazy Loaded Admin Pages
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminModeration = lazy(() => import('./pages/admin/AdminModeration'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
 // Loading Component
 const LoadingScreen = () => (
@@ -75,7 +75,8 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
       {/* Public routes */}
       <Route 
         path="/login" 
@@ -302,6 +303,7 @@ const AppRoutes = () => {
       {/* Catch all route - MUST BE AT THE VERY END */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, func
+import json
 
 from src.models.user import db, User, Like, Match, Message
 from src.models.admin import Admin, AdminAction, SupportTicket, SupportMessage, FAQ, FAQVote, SystemSetting
@@ -100,7 +101,7 @@ def update_admin_settings():
             target_type='system',
             target_id='settings',
             description='Updated system settings',
-            details=str(data)
+            details=json.dumps(data)
         )
         db.session.add(action)
         db.session.commit()

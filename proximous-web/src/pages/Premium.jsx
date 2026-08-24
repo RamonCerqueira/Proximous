@@ -108,7 +108,7 @@ const Premium = () => {
       }
       alert('Solicitação de pagamento recebida! O plano VIP foi ativado com sucesso.');
       setPixModalOpen(false);
-      fetchSubscriptionData();
+      fetchPlans();
     } catch (error) {
       console.error('Subscription error:', error);
       alert('Solicitação registrada! O plano VIP será confirmado em instantes.');

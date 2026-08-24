@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import uuid
+import os
 
 from src.models.user import db, User
 from src.models.subscription import Subscription, Payment, SubscriptionPlan, Coupon, CouponUsage
@@ -88,6 +89,7 @@ def create_subscription():
         
         # Calculate pricing
         amount = plan.price
+        coupon = None
         
         # Apply coupon if provided
         if coupon_code:
@@ -106,6 +108,7 @@ def create_subscription():
         
         # Create subscription
         subscription = Subscription(
+            id=str(uuid.uuid4()),
             user_id=current_user_id,
             plan_type=plan_type,
             amount=amount,
@@ -114,9 +117,11 @@ def create_subscription():
             next_billing_date=end_date
         )
         db.session.add(subscription)
+        db.session.flush()
         
         # Create payment record
         payment = Payment(
+            id=str(uuid.uuid4()),
             subscription_id=subscription.id,
             user_id=current_user_id,
             amount=amount,

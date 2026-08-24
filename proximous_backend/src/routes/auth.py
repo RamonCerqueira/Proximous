@@ -7,24 +7,30 @@ import uuid
 from src.models.user import db, User
 from src.models.admin import Admin
 from src.utils.redis_client import token_blacklist
+from src.utils.datetime_utils import utc_now
 
 auth_bp = Blueprint('auth', __name__)
 
 def validate_email(email):
+    if not email or not isinstance(email, str) or len(email) > 254 or len(email) < 5:
+        return False
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
 def validate_password(password):
-    # At least 8 characters, one uppercase, one lowercase, one number
+    if not password or not isinstance(password, str):
+        return False, "A senha é obrigatória"
     if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
+        return False, "A senha deve ter no mínimo 8 caracteres"
+    if len(password) > 128:
+        return False, "A senha deve ter no máximo 128 caracteres"
     if not re.search(r'[A-Z]', password):
-        return False, "Password must contain at least one uppercase letter"
+        return False, "A senha deve conter ao menos uma letra maiúscula"
     if not re.search(r'[a-z]', password):
-        return False, "Password must contain at least one lowercase letter"
+        return False, "A senha deve conter ao menos uma letra minúscula"
     if not re.search(r'\d', password):
-        return False, "Password must contain at least one number"
-    return True, "Password is valid"
+        return False, "A senha deve conter ao menos um número"
+    return True, "Senha válida"
 
 @auth_bp.route('/register', methods=['POST'])
 def register():

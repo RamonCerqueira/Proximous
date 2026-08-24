@@ -48,6 +48,8 @@ class MomentLike(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    __table_args__ = (db.UniqueConstraint('moment_id', 'user_id', name='unique_moment_like'),)
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)

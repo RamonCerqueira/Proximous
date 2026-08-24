@@ -3,7 +3,7 @@ import sys
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from datetime import datetime, timedelta
@@ -49,10 +49,37 @@ else:
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # Configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'proximous-secret-key-change-in-production')
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-in-production')
+DEFAULT_STRONG_JWT_KEY = "c8f93e2b7a41904e5d6c8b1a3f0e7d5c9b2a4f6e8d1c3b5a7e9f0d2c4b6a8e1f"
+DEFAULT_STRONG_SECRET_KEY = "e1f3a5b7c9d0e2f4a6b8c1d3e5f7a9b0c2d4e6f8a1b3c5d7e9f0a2b4c6d8e0f2"
+
+jwt_key = os.environ.get('JWT_SECRET_KEY')
+if not jwt_key or len(jwt_key) < 32:
+    jwt_key = DEFAULT_STRONG_JWT_KEY
+app.config['JWT_SECRET_KEY'] = jwt_key
+
+secret_key = os.environ.get('SECRET_KEY')
+if not secret_key or len(secret_key) < 32:
+    secret_key = DEFAULT_STRONG_SECRET_KEY
+app.config['SECRET_KEY'] = secret_key
+
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+
+# Optional Sentry initialization
+sentry_dsn = os.environ.get('SENTRY_DSN')
+if sentry_dsn and not sentry_dsn.startswith('sua_url'):
+    try:
+        import importlib
+        sentry_sdk = importlib.import_module('sentry_sdk')
+        flask_integration = importlib.import_module('sentry_sdk.integrations.flask').FlaskIntegration
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[flask_integration()],
+            traces_sample_rate=0.2
+        )
+        print("Sentry error monitoring initialized.")
+    except Exception as se:
+        print(f"Sentry notice: {se}")
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL')
@@ -71,6 +98,37 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:5174')
 allowed_origins = [o.strip() for o in allowed_origins_env.split(',')]
 CORS(app, origins=allowed_origins, allow_headers=["Content-Type", "Authorization"])
+
+# Rate Limiter configuration
+def get_client_ip():
+    """Extract real client IP address considering proxy headers (Cloudflare/Nginx/Render)"""
+    forwarded = request.headers.get('X-Forwarded-For')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or '127.0.0.1'
+
+try:
+    from flask_limiter import Limiter
+
+    redis_url = os.environ.get('REDIS_URL')
+    # Default to memory storage unless a remote Redis is reachable
+    storage_uri = "memory://"
+    if redis_url and not redis_url.startswith('redis://localhost'):
+        storage_uri = redis_url
+
+    limiter = Limiter(
+        get_client_ip,
+        app=app,
+        default_limits=["2000 per hour", "200 per minute"],
+        storage_uri=storage_uri,
+        strategy="moving-window",
+        swallow_errors=True,
+        in_memory_fallback_enabled=True
+    )
+    print("Flask-Limiter rate limiting initialized.")
+except Exception as le:
+    limiter = None
+    print(f"Limiter notice: {le}")
 
 # SocketIO configuration
 try:
@@ -102,6 +160,16 @@ app.register_blueprint(support_bp, url_prefix='/api/support')
 app.register_blueprint(activities_bp, url_prefix='/api/activities')
 app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 app.register_blueprint(upload_bp, url_prefix='/api/upload')
+
+# Security Headers Middleware
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(self), camera=(), microphone=()'
+    return response
 
 
 

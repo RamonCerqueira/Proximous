@@ -16,20 +16,37 @@ let socket = null;
 
 export const initSocket = () => {
   if (!socket) {
+    const token = localStorage.getItem('proximous_token');
     socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000
+      reconnectionAttempts: 15,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+      timeout: 20000,
+      auth: token ? { token } : {}
     });
 
     socket.on('connect', () => {
       console.log('⚡ Connected to Socket.IO Real-time server:', socket.id);
     });
 
-    socket.on('disconnect', () => {
-      console.log('🔌 Disconnected from Socket.IO server');
+    socket.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 Reconnected to Socket.IO after ${attemptNumber} attempts`);
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.warn('⚠️ Socket.IO Reconnection attempt error:', error.message);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.warn('⚠️ Socket.IO Connection error:', error.message);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 Disconnected from Socket.IO server. Reason:', reason);
     });
   }
   return socket;

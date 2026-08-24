@@ -500,10 +500,10 @@ def get_message_stats():
             receiver_id=current_user_id
         ).distinct().count()
         
-        total_conversations = db.session.query(
-            db.func.least(Message.sender_id, Message.receiver_id),
-            db.func.greatest(Message.sender_id, Message.receiver_id)
-        ).filter(
+        # Count unique conversations in a cross-database compatible way
+        conv_col1 = db.case((Message.sender_id < Message.receiver_id, Message.sender_id), else_=Message.receiver_id)
+        conv_col2 = db.case((Message.sender_id > Message.receiver_id, Message.sender_id), else_=Message.receiver_id)
+        total_conversations = db.session.query(conv_col1, conv_col2).filter(
             or_(
                 Message.sender_id == current_user_id,
                 Message.receiver_id == current_user_id

@@ -106,7 +106,10 @@ class AdminAction(db.Model):
 
     def get_details(self):
         if self.details:
-            return json.loads(self.details)
+            try:
+                return json.loads(self.details)
+            except Exception:
+                return {'raw': self.details}
         return {}
 
     def set_details(self, details):

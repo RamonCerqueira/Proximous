@@ -85,14 +85,16 @@ def toggle_like_moment(moment_id):
         
         if existing_like:
             db.session.delete(existing_like)
-            moment.likes_count = max(0, (moment.likes_count or 1) - 1)
+            db.session.flush()
             liked = False
         else:
             new_like = MomentLike(moment_id=moment_id, user_id=current_user_id)
             db.session.add(new_like)
-            moment.likes_count = (moment.likes_count or 0) + 1
+            db.session.flush()
             liked = True
             
+        # Ensure likes_count is perfectly synchronized with database rows
+        moment.likes_count = MomentLike.query.filter_by(moment_id=moment_id).count()
         db.session.commit()
         return jsonify({
             'liked_by_me': liked,

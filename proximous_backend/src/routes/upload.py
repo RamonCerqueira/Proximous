@@ -38,36 +38,76 @@ def upload_photo():
         # Check Cloudinary configuration
         cloudinary_url = os.environ.get('CLOUDINARY_URL')
         cloudinary_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+        cloudinary_key = os.environ.get('CLOUDINARY_API_KEY')
+        cloudinary_secret = os.environ.get('CLOUDINARY_API_SECRET')
 
-        if cloudinary_url or cloudinary_name:
+        if cloudinary_url or (cloudinary_name and cloudinary_key and cloudinary_secret):
             try:
                 import cloudinary
                 import cloudinary.uploader
+                
+                if cloudinary_name and cloudinary_key and cloudinary_secret:
+                    cloudinary.config(
+                        cloud_name=cloudinary_name,
+                        api_key=cloudinary_key,
+                        api_secret=cloudinary_secret,
+                        secure=True
+                    )
+
                 upload_result = cloudinary.uploader.upload(
                     file,
                     folder="proximous_profiles",
                     resource_type="image",
                     transformation=[
                         {'width': 1080, 'height': 1080, 'crop': 'limit'},
-                        {'quality': 'auto'}
+                        {'quality': 'auto', 'fetch_format': 'auto'}
                     ]
                 )
                 photo_url = upload_result.get('secure_url')
                 return jsonify({
                     'message': 'Photo uploaded successfully',
-                    'photo_url': photo_url
+                    'photo_url': photo_url,
+                    'public_id': upload_result.get('public_id')
                 }), 201
             except Exception as ce:
                 print(f"Cloudinary upload failed ({ce}), falling back to local storage.")
+                try:
+                    file.seek(0)
+                except Exception:
+                    pass
 
-        # Local storage fallback
+        # Local storage fallback with Pillow optimization
         upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
 
         ext = file.filename.rsplit('.', 1)[1].lower()
         unique_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename.rsplit('.', 1)[0])}.{ext}"
         filepath = os.path.join(upload_dir, unique_filename)
-        file.save(filepath)
+
+        try:
+            from PIL import Image, ImageOps
+            img = Image.open(file)
+            img = ImageOps.exif_transpose(img)
+            
+            # Downscale if larger than 1440x1440
+            max_size = (1440, 1440)
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            # Save compressed according to format
+            if ext in ['jpg', 'jpeg']:
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                img.save(filepath, format='JPEG', quality=85, optimize=True)
+            elif ext == 'png':
+                img.save(filepath, format='PNG', optimize=True)
+            elif ext == 'webp':
+                img.save(filepath, format='WEBP', quality=85)
+            else:
+                file.seek(0)
+                file.save(filepath)
+        except Exception:
+            file.seek(0)
+            file.save(filepath)
 
         # Generate access URL
         base_url = os.environ.get('BACKEND_PUBLIC_URL') or os.environ.get('VITE_API_URL', 'http://localhost:5001')
