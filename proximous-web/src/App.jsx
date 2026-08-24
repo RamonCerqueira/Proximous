@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 // Lazy Loaded Pages
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Home = lazy(() => import('./pages/Home'));
@@ -90,16 +91,22 @@ const AppRoutes = () => {
           isAuthenticated ? <Navigate to="/" replace /> : <Register />
         } 
       />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/welcome" element={<LandingPage />} />
 
-      {/* Protected routes */}
+      {/* Root route: Landing for visitors, Dashboard for authenticated users */}
       <Route 
         path="/" 
         element={
-          <ProtectedRoute>
-            <Layout>
-              <Home />
-            </Layout>
-          </ProtectedRoute>
+          isAuthenticated ? (
+            <ProtectedRoute>
+              <Layout>
+                <Home />
+              </Layout>
+            </ProtectedRoute>
+          ) : (
+            <LandingPage />
+          )
         } 
       />
 

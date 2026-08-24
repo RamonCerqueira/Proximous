@@ -165,16 +165,19 @@ const Register = () => {
           <CardContent className="p-8 sm:p-10 space-y-6">
             {/* Header */}
             <div className="text-center space-y-2">
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="w-16 h-16 rounded-2xl proximous-gradient flex items-center justify-center mx-auto shadow-xl"
-              >
-                <UserPlus className="h-8 w-8 text-white" />
-              </motion.div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground">Junte-se ao Proximous</h1>
-              <p className="text-xs text-muted-foreground font-medium">Crie seu perfil e descubra conexões autênticas perto de você</p>
+              <div className="flex justify-center mb-2">
+                <img
+                  src="/logoProximouCompleta.png"
+                  alt="Proximous"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/logoProximou.png';
+                  }}
+                  className="h-14 sm:h-16 w-auto object-contain"
+                />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Crie sua Conta</h1>
+              <p className="text-xs text-muted-foreground font-medium">Descubra conexões autênticas e rolês em tempo real</p>
             </div>
 
             {error && (

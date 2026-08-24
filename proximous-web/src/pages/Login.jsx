@@ -121,21 +121,23 @@ const Login = () => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="text-center space-y-3"
+              className="text-center space-y-2"
             >
-              <div className="mx-auto w-20 h-20 bg-gradient-to-tr from-purple-600 via-pink-600 to-rose-500 rounded-3xl flex items-center justify-center shadow-xl shadow-purple-500/20 ring-4 ring-purple-500/10">
-
-                <Heart className="h-10 w-10 text-white fill-white" />
+              <div className="flex justify-center mb-2">
+                <img
+                  src="/logoProximouCompleta.png"
+                  alt="Proximous"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/logoProximou.png';
+                  }}
+                  className="h-14 sm:h-16 w-auto object-contain"
+                />
               </div>
-              <div>
-                <h1 className="text-4xl font-black tracking-tight luxury-gradient-text">
-                  Proximous
-                </h1>
-                <p className="text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1 mt-1">
-                  <MapPin className="h-3.5 w-3.5 text-purple-400" />
-                  Conexões autênticas & descobertas em tempo real
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1 mt-1">
+                <MapPin className="h-3.5 w-3.5 text-purple-400" />
+                Conexões autênticas & descobertas em tempo real
+              </p>
             </motion.div>
 
             {error && (
