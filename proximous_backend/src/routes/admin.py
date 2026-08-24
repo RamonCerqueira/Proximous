@@ -43,7 +43,7 @@ def require_admin_permission(permission):
 @require_admin_role()
 def get_admin_settings():
     try:
-        free_premium_days = SystemSetting.get_int('global_free_premium_days', 120)
+        free_premium_days = SystemSetting.get_int('global_free_premium_days', 7)
         global_free_premium_enabled = SystemSetting.get_bool('global_free_premium_enabled', True)
         
         settings = {
@@ -107,7 +107,7 @@ def update_admin_settings():
         db.session.commit()
 
         # Fetch updated settings
-        free_premium_days = SystemSetting.get_int('global_free_premium_days', 120)
+        free_premium_days = SystemSetting.get_int('global_free_premium_days', 7)
         global_free_premium_enabled = SystemSetting.get_bool('global_free_premium_enabled', True)
 
         updated_settings = {

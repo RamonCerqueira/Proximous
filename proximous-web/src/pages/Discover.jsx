@@ -19,6 +19,8 @@ import {
   Radio
 } from 'lucide-react';
 import { usersAPI, matchingAPI, activitiesAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useVipModal } from '@/context/VipModalContext';
 
 // Modular Components
 import ActivitySearchHub from '@/components/discover/ActivitySearchHub';
@@ -39,6 +41,8 @@ const INTENT_MODES = [
 
 const Discover = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const { openVipModal } = useVipModal();
 
   // View state: 'profiles' (Descoberta VIP) | 'now' (Conexões Agora ⚡) | 'grid' (Grade de Perfis 🌐)
   const [viewMode, setViewMode] = useState('profiles');
@@ -165,6 +169,15 @@ const Discover = () => {
   };
 
   const handleSwipe = async (direction, userId) => {
+    if (direction === 'superlike' && !user?.is_premium) {
+      openVipModal({
+        title: 'Super Like VIP ⭐',
+        feature: 'Super Like Exclusivo',
+        description: 'O Super Like é um recurso VIP que destaca seu perfil com prioridade máxima.'
+      });
+      return;
+    }
+
     const isLike = direction === 'right' || direction === 'superlike';
     setSwipeDirection(isLike ? 'right' : 'left');
     if (isLike) {
@@ -173,6 +186,15 @@ const Discover = () => {
         await matchingAPI.sendLike({ receiver_id: userId, like_type: likeType });
       } catch (error) {
         console.error('Error sending like/superlike:', error);
+        if (error.response?.status === 429) {
+          openVipModal({
+            title: 'Limite Diário Atingido ⚡',
+            feature: 'Curtidas Ilimitadas',
+            description: 'Você utilizou o limite de 10 curtidas diárias do plano gratuito. Seja VIP para curtir à vontade!'
+          });
+          setSwipeDirection(null);
+          return;
+        }
       }
     }
     setTimeout(() => {

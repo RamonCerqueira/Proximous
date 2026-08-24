@@ -62,7 +62,7 @@ def register():
         
         # Create new user with Promotional Free Premium from SystemSetting
         from src.models.admin import SystemSetting
-        free_days = SystemSetting.get_int('global_free_premium_days', 120)
+        free_days = SystemSetting.get_int('global_free_premium_days', 7)
         
         user = User(
             email=email,

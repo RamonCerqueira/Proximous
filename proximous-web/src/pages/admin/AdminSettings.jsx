@@ -41,7 +41,7 @@ const DEFAULT_ADS = [
 
 const AdminSettings = () => {
   const [settings, setSettings] = useState({
-    global_free_premium_days: 120,
+    global_free_premium_days: 7,
     global_free_premium_enabled: true,
     max_daily_likes_free: 10,
     max_daily_messages_free: 10,

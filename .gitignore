@@ -174,3 +174,7 @@ scratch/
 *.tmp
 *.temp
 *.bak
+
+# Static uploads
+proximous_backend/src/static/uploads/*
+!proximous_backend/src/static/uploads/.gitkeep

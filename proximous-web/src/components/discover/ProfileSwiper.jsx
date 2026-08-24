@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import UserProfileModal from '@/components/UserProfileModal';
 import { useAuth } from '@/hooks/useAuth';
+import { useVipModal } from '@/context/VipModalContext';
 import { formatDistance } from '@/lib/auth';
 
 const CardItem = ({
@@ -212,6 +213,7 @@ const ProfileSwiper = ({
   onResetFilters,
 }) => {
   const { user } = useAuth();
+  const { openVipModal } = useVipModal();
   const [selectedUserModal, setSelectedUserModal] = useState(null);
   const [detectedCity, setDetectedCity] = useState(user?.city || user?.location_name || '');
   const [activeAdIndex, setActiveAdIndex] = useState(0);
@@ -356,7 +358,17 @@ const ProfileSwiper = ({
         <motion.button
           whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => onSwipe('superlike', currentUser.id)}
+          onClick={() => {
+            if (!user?.is_premium) {
+              openVipModal({
+                title: 'Super Like VIP ⭐',
+                feature: 'Super Like Exclusivo',
+                description: 'O Super Like destaca seu perfil diretamente na tela da pessoa com prioridade máxima.'
+              });
+              return;
+            }
+            onSwipe('superlike', currentUser.id);
+          }}
           className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-amber-500/20 hover:bg-amber-400 border border-amber-400/50 text-amber-300 hover:text-slate-950 transition-all flex items-center justify-center shadow-lg"
           title="Super Like VIP (Arrastar para cima)"
         >

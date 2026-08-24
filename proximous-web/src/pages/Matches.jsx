@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { useVipModal } from '@/context/VipModalContext';
 import { matchingAPI } from '../lib/api';
-import { Sparkles, ChevronDown, Mail, Send, Filter } from 'lucide-react';
+import { Sparkles, ChevronDown, Mail, Send, Filter, Crown, Zap } from 'lucide-react';
 import UserProfileModal from '@/components/UserProfileModal';
 import SponsoredAdSlot from '@/components/SponsoredAdSlot';
 
@@ -26,6 +27,7 @@ const SORT_OPTIONS = [
 
 const Matches = () => {
   const { user } = useAuth();
+  const { openVipModal } = useVipModal();
   const navigate = useNavigate();
 
   // Single State Managing Page Tab: 'matches' | 'received' | 'sent'
@@ -373,13 +375,59 @@ const Matches = () => {
       {/* TAB 2: RECEBIDOS */}
       {activeTab === 'received' && (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#FF4FA3]" />
-              <span>Pessoas interessadas em você</span>
-            </h2>
-            <p className="text-xs text-[#AAA5BA] font-medium">Elas curtiram seu perfil e querem te conhecer.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#FF4FA3]" />
+                <span>Pessoas interessadas em você</span>
+              </h2>
+              <p className="text-xs text-[#AAA5BA] font-medium">Elas curtiram seu perfil e querem te conhecer.</p>
+            </div>
+
+            {!user?.is_premium && (
+              <button
+                onClick={() => openVipModal({
+                  title: 'Desbloquear Quem Te Curtiu 👑',
+                  feature: 'Ver Quem Te Curtiu',
+                  description: 'Veja todos os seus admiradores secretos com fotos nítidas e dê match instantâneo.'
+                })}
+                className="self-start sm:self-auto px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-purple-600 hover:opacity-90 text-white text-xs font-black shadow-lg flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <Crown className="w-3.5 h-3.5 fill-white" />
+                <span>Desbloquear Tudo com VIP</span>
+              </button>
+            )}
           </div>
+
+          {!user?.is_premium && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 via-[#1C0E32]/80 to-amber-950/30 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-5 h-5 fill-amber-300" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-white">
+                    Você tem pessoas que curtiram você!
+                  </h4>
+                  <p className="text-[11px] text-purple-200/80 font-medium">
+                    No plano Free as fotos são borradas por privacidade. Torne-se VIP para ver todos os perfis com nitidez.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => openVipModal({
+                  title: 'Desbloquear Quem Te Curtiu 👑',
+                  feature: 'Ver Quem Te Curtiu',
+                  description: 'Veja todos os seus admiradores secretos com fotos nítidas e dê match instantâneo.'
+                })}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-md flex items-center justify-center gap-1 transition-all whitespace-nowrap"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                <span>Ver com VIP</span>
+              </button>
+            </div>
+          )}
 
           {receivedLikes.length === 0 ? (
             <EmptyMatchState tabKey="received" />
@@ -389,7 +437,18 @@ const Matches = () => {
                 <React.Fragment key={like.id || index}>
                   <ReceivedRequestCard
                     like={like}
-                    onOpenProfile={(u) => setSelectedUserModal(u)}
+                    isFreeUser={!user?.is_premium}
+                    onOpenProfile={(u) => {
+                      if (!user?.is_premium) {
+                        openVipModal({
+                          title: 'Desbloquear Perfil VIP 👑',
+                          feature: 'Ver Quem Te Curtiu',
+                          description: 'Assine o VIP para visualizar o perfil completo e conversar diretamente.'
+                        });
+                        return;
+                      }
+                      setSelectedUserModal(u);
+                    }}
                     onLikeBack={handleLikeBack}
                     onIgnore={(id) => handleCancelLike(id)}
                   />

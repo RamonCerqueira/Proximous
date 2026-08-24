@@ -199,7 +199,7 @@ class User(db.Model):
             from src.models.admin import SystemSetting
             global_enabled = SystemSetting.get_bool('global_free_premium_enabled', True)
             if global_enabled:
-                free_days = SystemSetting.get_int('global_free_premium_days', 120)
+                free_days = SystemSetting.get_int('global_free_premium_days', 7)
                 if self.created_at and (datetime.utcnow() - self.created_at).days < free_days:
                     return True
         except Exception:

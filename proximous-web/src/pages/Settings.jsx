@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useVipModal } from '@/context/VipModalContext';
 import { usersAPI, authAPI } from '../lib/api';
 import { 
   User, 
@@ -16,12 +17,14 @@ import {
   ArrowLeft,
   Moon,
   Sun,
-  Sparkles
+  Sparkles,
+  Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Settings = () => {
   const { user, logout } = useAuth();
+  const { openVipModal } = useVipModal();
   const { theme, setTheme, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('account');
   const [loading, setLoading] = useState(false);
@@ -55,6 +58,15 @@ const Settings = () => {
   });
 
   const handlePrivacyToggle = async (key) => {
+    if (key === 'incognitoMode' && !user?.is_premium) {
+      openVipModal({
+        title: 'Modo Incógnito VIP 👻',
+        feature: 'Navegação Invisível',
+        description: 'Navegue por perfis no mapa e no radar sem ser detectado ou aparecer no feed de visitantes.'
+      });
+      return;
+    }
+
     const updated = { ...privacy, [key]: !privacy[key] };
     setPrivacy(updated);
     try {

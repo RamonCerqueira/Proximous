@@ -313,6 +313,12 @@ with app.app_context():
         else:
             print("Default admin user created. Password set from ADMIN_DEFAULT_PASSWORD env var.")
     
+    # Initialize / sync default promotional VIP days setting (7 days)
+    from src.models.admin import SystemSetting
+    current_free_days = SystemSetting.get_setting('global_free_premium_days')
+    if current_free_days is None or current_free_days == '120':
+        SystemSetting.set_setting('global_free_premium_days', 7, 'Período de Premium gratuito para todos os usuários (dias)')
+    
     # Create default test users if they don't exist
     from src.models.user import User
     test_users = [
@@ -338,7 +344,7 @@ with app.app_context():
                 longitude=u_data.get('lon'),
                 profile_photo_url=u_data.get('photo'),
                 is_premium=True,
-                premium_expires_at=datetime.utcnow() + timedelta(days=120)
+                premium_expires_at=datetime.utcnow() + timedelta(days=7)
             )
             u.set_password('Password123')
             u.set_personality_tags(['Gentil', 'Criativo(a)', 'Calmo(a)'])

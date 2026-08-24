@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import { ThemeProvider } from './hooks/useTheme.jsx';
+import { VipModalProvider } from './context/VipModalContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -320,7 +321,9 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <VipModalProvider>
+            <AppRoutes />
+          </VipModalProvider>
         </AuthProvider>
       </ThemeProvider>
     </Router>

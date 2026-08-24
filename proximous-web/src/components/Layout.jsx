@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
+import { useVipModal } from '@/context/VipModalContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ import { usersAPI } from '../lib/api';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { openVipModal } = useVipModal();
   const { theme, toggleTheme, isDark } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,7 +151,7 @@ const Layout = ({ children }) => {
                 }}
                 className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
               />
-              <img
+              {/* <img
                 src="/logoProximouCompleta.png"
                 alt="Proximous"
                 onError={(e) => {
@@ -157,7 +159,7 @@ const Layout = ({ children }) => {
                   e.currentTarget.src = '/logoProximou.png';
                 }}
                 className="h-8 sm:h-9 w-auto object-contain hidden sm:block"
-              />
+              /> */}
             </Link>
 
             {/* Desktop Navigation Header with Animated Sliding Pill */}
@@ -193,12 +195,19 @@ const Layout = ({ children }) => {
             {/* User Profile & Actions */}
             <div className="flex items-center space-x-2.5">
               {/* Premium VIP Badge indicator */}
-              <Link to="/premium" className="hidden sm:inline-flex">
+              <button
+                onClick={() => openVipModal({
+                  title: user?.is_premium ? 'Plano Proximous VIP ⭐' : 'Seja Proximous VIP 👑',
+                  description: user?.is_premium ? 'Seu plano VIP está ativo com acesso total e ilimitado.' : 'Desbloqueie curtidas ilimitadas, veja quem te curtiu e navegue com privacidade.'
+                })}
+                className="hidden sm:inline-flex"
+                title={user?.is_premium ? 'VIP Ativo' : 'Assinar VIP'}
+              >
                 <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 font-extrabold text-xs px-3.5 py-1.5 rounded-full hover:opacity-90 shadow-[0_0_15px_rgba(245,158,11,0.3)] flex items-center gap-1.5 cursor-pointer">
                   <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
-                  <span>VIP</span>
+                  <span>{user?.is_premium ? 'VIP ATIVO' : 'SEJA VIP'}</span>
                 </Badge>
-              </Link>
+              </button>
 
               {/* Notifications Bell Icon Button */}
               <Button

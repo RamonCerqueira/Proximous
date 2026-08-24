@@ -204,6 +204,15 @@ def run_backend_audit():
         user2_id = u2_data.get('user', {}).get('id')
         user2_headers = {'Authorization': f'Bearer {user2_token}'}
 
+        # Set required photos for test users
+        u1 = User.query.get(user_id)
+        u2 = User.query.get(user2_id)
+        if u1:
+            u1.set_photos(['https://images.unsplash.com/photo-1', 'https://images.unsplash.com/photo-2'])
+        if u2:
+            u2.set_photos(['https://images.unsplash.com/photo-1', 'https://images.unsplash.com/photo-2'])
+        db.session.commit()
+
         u3_res = client.post('/api/auth/register', json={
             'name': 'Carlos Lima',
             'email': 'carlos@example.com',

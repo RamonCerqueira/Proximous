@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useVipModal } from '@/context/VipModalContext';
 import { messagesAPI } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getSocket, initSocket } from '../lib/socket';
+import { Crown, Sparkles, Send } from 'lucide-react';
 import SponsoredAdSlot from '../components/SponsoredAdSlot';
 
 const Messages = () => {
   const { user } = useAuth();
+  const { openVipModal } = useVipModal();
   const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -189,6 +192,15 @@ const Messages = () => {
       fetchConversations();
     } catch (err) {
       console.error('Error sending message:', err);
+      if (err.response?.status === 429) {
+        openVipModal({
+          title: 'Limite de Mensagens Atingido 💬',
+          feature: 'Mensagens Ilimitadas',
+          description: 'Você atingiu o limite de 10 mensagens diárias do plano gratuito. Assine o VIP para conversar ilimitadamente!'
+        });
+        setNewMessage(content);
+        return;
+      }
     } finally {
       setSending(false);
     }
