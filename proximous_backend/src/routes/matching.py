@@ -465,6 +465,27 @@ def get_matches():
     except Exception as e:
         return jsonify({'error': 'Failed to get matches', 'details': str(e)}), 500
 
+@matching_bp.route('/matches/<match_id>/seen', methods=['POST'])
+@jwt_required()
+def mark_match_seen(match_id):
+    try:
+        current_user_id = get_jwt_identity()
+        match = Match.query.filter(
+            Match.id == match_id,
+            or_(
+                Match.user1_id == current_user_id,
+                Match.user2_id == current_user_id
+            )
+        ).first()
+        
+        if not match:
+            return jsonify({'error': 'Match not found'}), 404
+            
+        return jsonify({'message': 'Match marked as seen', 'match_id': match_id}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to mark match as seen', 'details': str(e)}), 500
+
+
 @matching_bp.route('/matches/<match_id>/unmatch', methods=['POST'])
 @jwt_required()
 def unmatch(match_id):

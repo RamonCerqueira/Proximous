@@ -163,6 +163,7 @@ export const matchingAPI = {
   getSentLikes: (params) => api.get('/matching/likes/sent', { params }),
   getReceivedLikes: (params) => api.get('/matching/likes/received', { params }),
   getMatches: (params) => api.get('/matching/matches', { params }),
+  markMatchSeen: (matchId) => api.post(`/matching/matches/${matchId}/seen`),
   unmatch: (matchId) => api.post(`/matching/matches/${matchId}/unmatch`),
   getIcebreakers: () => api.get('/matching/icebreakers'),
   getCompliments: () => api.get('/matching/compliments'),

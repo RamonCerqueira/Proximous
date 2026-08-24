@@ -36,6 +36,7 @@ import {
 import { getUserInitials, generateAvatarUrl } from '../lib/auth';
 import NotificationsDrawer from './NotificationsDrawer';
 import MatchCelebrationModal from './MatchCelebrationModal';
+import NewMatchCelebrationModal from './NewMatchCelebrationModal';
 import MandatoryProfilePhotosGuard from './MandatoryProfilePhotosGuard';
 import { initSocket, getSocket } from '../lib/socket';
 import { usersAPI } from '../lib/api';
@@ -355,6 +356,8 @@ const Layout = ({ children }) => {
         matchData={matchCelebration}
         onClose={() => setMatchCelebration(null)}
       />
+
+      <NewMatchCelebrationModal />
 
       <NotificationsDrawer
         isOpen={notifDrawerOpen}
