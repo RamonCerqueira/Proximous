@@ -107,6 +107,7 @@ export const authAPI = {
 export const usersAPI = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
+  updatePhotos: (photos) => api.put('/users/profile', { photos }),
   addPhoto: (photoUrl) => api.post('/users/photos', { photo_url: photoUrl }),
   deletePhoto: (photoUrl) => api.delete('/users/photos', { data: { photo_url: photoUrl } }),
   discover: (params) => api.get('/users/discover', { params }),

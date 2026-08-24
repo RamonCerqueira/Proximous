@@ -94,11 +94,9 @@ export const MandatoryProfilePhotosGuard = ({ children }) => {
     try {
       setSaving(true);
 
-      // 1. Update photos in backend
-      await usersAPI.updatePhotos(photos);
-
-      // 2. Update basic info if provided
+      // Update profile with photos and basic info in one atomic call
       const profileUpdate = {
+        photos: photos,
         profile_photo_url: photos[0],
         bio: bio.trim() || 'Olá! Estou no Proximous para conhecer pessoas e fazer novas amizades.',
         location_city: city.trim() || 'Salvador',
