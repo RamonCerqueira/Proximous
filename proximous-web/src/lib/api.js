@@ -147,7 +147,9 @@ export const activitiesAPI = {
 // Moments API
 export const momentsAPI = {
   getMoments: (params) => api.get('/moments', { params }),
+  getMyMoments: (params) => api.get('/moments', { params: { ...params, only_mine: true } }),
   createMoment: (data) => api.post('/moments', data),
+  deleteMoment: (momentId) => api.delete(`/moments/${momentId}`),
   toggleLike: (momentId) => api.post(`/moments/${momentId}/like`),
   sendIcebreaker: (momentId, text) => api.post(`/moments/${momentId}/icebreaker`, { text }),
 };

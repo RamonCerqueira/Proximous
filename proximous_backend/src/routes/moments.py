@@ -15,8 +15,16 @@ def get_moments():
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 50)
         
-        # Query moments sorted by creation date
-        query = Moment.query.order_by(Moment.created_at.desc())
+        user_id_filter = request.args.get('user_id')
+        only_mine = request.args.get('only_mine', '').lower() in ('true', '1', 'yes') or request.args.get('filter') == 'mine'
+
+        query = Moment.query
+        if only_mine:
+            query = query.filter(Moment.user_id == current_user_id)
+        elif user_id_filter:
+            query = query.filter(Moment.user_id == user_id_filter)
+
+        query = query.order_by(Moment.created_at.desc())
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         
         moments_data = [m.to_dict(current_user_id=current_user_id) for m in paginated.items]
@@ -166,3 +174,26 @@ def send_moment_icebreaker(moment_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to send icebreaker', 'details': str(e)}), 500
+
+
+@moments_bp.route('/<moment_id>', methods=['DELETE'], strict_slashes=False)
+@jwt_required()
+def delete_moment(moment_id):
+    try:
+        current_user_id = get_jwt_identity()
+        moment = Moment.query.get(moment_id)
+        if not moment:
+            return jsonify({'error': 'Moment not found'}), 404
+            
+        if moment.user_id != current_user_id:
+            return jsonify({'error': 'Unauthorized to delete this moment'}), 403
+            
+        # Delete associated likes first
+        MomentLike.query.filter_by(moment_id=moment_id).delete()
+        db.session.delete(moment)
+        db.session.commit()
+        
+        return jsonify({'message': 'Moment deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete moment', 'details': str(e)}), 500

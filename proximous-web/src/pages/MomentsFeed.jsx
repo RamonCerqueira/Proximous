@@ -25,6 +25,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import { momentsAPI, uploadAPI } from '../lib/api';
 import { EmojiStyle } from 'emoji-picker-react';
 import SponsoredAdSlot from '../components/SponsoredAdSlot';
+import { toast } from 'sonner';
 
 const EmojiPicker = React.lazy(() => import('emoji-picker-react'));
 
@@ -49,6 +50,7 @@ const MomentsFeed = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
+  const [feedFilter, setFeedFilter] = useState('all'); // 'all' | 'mine'
   const [moments, setMoments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -104,56 +106,62 @@ const MomentsFeed = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchMoments();
+    fetchMoments(feedFilter);
   }, []);
 
-  const fetchMoments = async () => {
+  const fetchMoments = async (filter = feedFilter) => {
     try {
       setLoading(true);
       setPage(1);
-      const res = await momentsAPI.getMoments({ page: 1, per_page: 10 });
-      const loaded = res.data.moments || [];
-      if (loaded.length === 0) {
-        throw new Error('No moments returned from API');
+      const params = { page: 1, per_page: 10 };
+      if (filter === 'mine') {
+        params.only_mine = true;
       }
+      const res = await momentsAPI.getMoments(params);
+      const loaded = res.data.moments || [];
       setMoments(loaded);
       setHasMore(res.data.page < res.data.pages);
     } catch (err) {
-      console.warn('Using fallback moments:', err);
-      const now = Date.now();
-      const myCity = userDetectedCity || user?.city || 'Sua Região';
-
-      setMoments([
-        {
-          id: 'm1',
-          user_name: 'Mariana Silva',
-          user_age: 24,
-          user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
-          user_city: myCity,
-          user_id: 'user1',
-          content: 'Domingo perfeito lendo um bom livro num café calmo. Alguém indica novidades de ficção científica? ☕📚',
-          photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
-          likes_count: 24,
-          liked_by_me: false,
-          created_at: new Date(now - 15 * 60000).toISOString()
-        },
-        {
-          id: 'm2',
-          user_name: 'Lucas Santos',
-          user_age: 27,
-          user_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-          user_city: myCity,
-          user_id: 'user2',
-          content: 'Trilha matinal no fim de semana para recarregar as energias. Lugares silenciosos são os melhores. 🌿⛰️',
-          photo_url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
-          likes_count: 41,
-          liked_by_me: true,
-          created_at: new Date(now - 120 * 60000).toISOString()
-        }
-      ]);
-      setHasMore(false);
+      console.warn('Error loading moments:', err);
+      if (filter === 'mine') {
+        setMoments([]);
+      } else {
+        const now = Date.now();
+        const myCity = userDetectedCity || user?.city || 'Sua Região';
+        setMoments([
+          {
+            id: 'm1',
+            user_name: 'Mariana Silva',
+            user_age: 24,
+            user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=400&q=80',
+            user_city: myCity,
+            user_id: 'user1',
+            content: 'Domingo perfeito lendo um bom livro num café calmo. Alguém indica novidades de ficção científica? ☕📚',
+            photo_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+            likes_count: 24,
+            liked_by_me: false,
+            created_at: new Date(now - 15 * 60000).toISOString()
+          }
+        ]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setFeedFilter(newFilter);
+    fetchMoments(newFilter);
+  };
+
+  const handleDeleteMoment = async (momentId) => {
+    try {
+      await momentsAPI.deleteMoment(momentId);
+      setMoments(prev => prev.filter(m => m.id !== momentId));
+      toast.success('Momento excluído com sucesso!');
+    } catch (err) {
+      console.error('Error deleting moment:', err);
+      toast.error('Erro ao excluir momento.');
     }
   };
 
@@ -334,8 +342,37 @@ const MomentsFeed = () => {
           </Button>
         </div>
 
+        {/* Feed Filter Switcher (Feed da Comunidade vs Minhas Postagens) */}
+        <div className="flex items-center gap-2 p-1.5 bg-[#130D26]/90 border border-white/10 rounded-2xl shadow-lg">
+          <button
+            type="button"
+            onClick={() => handleFilterChange('all')}
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              feedFilter === 'all'
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#FF2B68] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>🌍 Feed da Comunidade</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFilterChange('mine')}
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              feedFilter === 'mine'
+                ? 'bg-gradient-to-r from-[#9B20F0] to-[#FF2B68] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>👤 Minhas Postagens</span>
+          </button>
+        </div>
+
         {/* 📢 SPONSORED AD SLOT IN FEED TOP BANNER */}
-        <SponsoredAdSlot slotId="moments_feed_top" type="banner" />
+        {feedFilter === 'all' && (
+          <SponsoredAdSlot slotId="moments_feed_top" type="banner" />
+        )}
 
         {/* Loading State */}
         {loading && (
@@ -345,8 +382,31 @@ const MomentsFeed = () => {
           </div>
         )}
 
+        {/* Empty state for my moments */}
+        {!loading && moments.length === 0 && (
+          <div className="p-8 rounded-3xl bg-[#120B24]/60 border border-white/10 text-center space-y-3 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300 mx-auto">
+              <Camera className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-black text-white">
+              {feedFilter === 'mine' ? 'Você ainda não publicou nenhum momento.' : 'Nenhum momento encontrado por perto.'}
+            </h3>
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              {feedFilter === 'mine' 
+                ? 'Compartilhe fotos do seu dia, cafés, viagens e pensamentos para ganhar pontos de empatia e engajar no radar!' 
+                : 'Seja o primeiro a compartilhar um momento hoje!'}
+            </p>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-[#9B20F0] to-[#FF2B68] text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-lg"
+            >
+              <Plus className="w-4 h-4 mr-1.5" /> Criar Meu Primeiro Momento
+            </Button>
+          </div>
+        )}
+
         {/* Moments Stream with Native Sponsored Ad Insertion */}
-        {!loading && (
+        {!loading && moments.length > 0 && (
           <div className="space-y-6">
             {moments.map((moment, index) => (
               <React.Fragment key={moment.id}>
@@ -377,9 +437,23 @@ const MomentsFeed = () => {
                       </div>
                     </div>
 
-                    <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-extrabold">
-                      {formatMomentTime(moment.created_at)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10 font-extrabold">
+                        {formatMomentTime(moment.created_at)}
+                      </Badge>
+
+                      {/* Delete button if user is the author */}
+                      {(moment.user_id === user?.id || feedFilter === 'mine') && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMoment(moment.id)}
+                          className="p-1.5 rounded-lg bg-red-600/15 text-red-400 hover:bg-red-600 hover:text-white transition-colors"
+                          title="Excluir Momento"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* 1:1 Aspect Ratio Photo */}
