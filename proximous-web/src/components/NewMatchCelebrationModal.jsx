@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Sparkles, MessageCircle, X, ArrowRight, Zap, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import * as THREE from 'three';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { matchingAPI } from '../lib/api';
 import { Button } from '@/components/ui/button';
@@ -37,174 +36,103 @@ const saveSeenMatchId = (userId, matchId) => {
 };
 
 /**
- * 🌟 Three.js 3D Particle & Heart Vortex Canvas
+ * 🌟 Self-Contained 3D Neon Particle & Starfield Canvas
+ * Zero external dependencies — works smoothly on any browser & VPS!
  */
 const ThreeMatchCanvas = () => {
-  const mountRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
-    const container = mountRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // 1. Scene, Camera, Renderer
-    const scene = new THREE.Scene();
-    const width = container.clientWidth || window.innerWidth;
-    const height = container.clientHeight || window.innerHeight;
+    let animId;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
 
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    camera.position.z = 35;
+    // 3D Particles
+    const numParticles = 140;
+    const particles = [];
+    const colors = ['#9B20F0', '#FF2B68', '#FF80BF', '#FFD700', '#35E38A'];
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-
-    // 2. 3D Neon Particle Starfield
-    const particleCount = 280;
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    const scales = new Float32Array(particleCount);
-
-    const palette = [
-      new THREE.Color('#9B20F0'), // Neon Purple
-      new THREE.Color('#FF2B68'), // Hot Pink
-      new THREE.Color('#FF80BF'), // Soft Rose
-      new THREE.Color('#FFD700'), // Gold
-      new THREE.Color('#35E38A')  // Mint
-    ];
-
-    for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
-
-      const col = palette[Math.floor(Math.random() * palette.length)];
-      colors[i * 3] = col.r;
-      colors[i * 3 + 1] = col.g;
-      colors[i * 3 + 2] = col.b;
-
-      scales[i] = Math.random() * 2 + 1;
+    for (let i = 0; i < numParticles; i++) {
+      particles.push({
+        x: (Math.random() - 0.5) * width * 1.5,
+        y: (Math.random() - 0.5) * height * 1.5,
+        z: Math.random() * 800 + 100,
+        radius: Math.random() * 2.5 + 1.2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speedZ: Math.random() * 1.8 + 0.8,
+        angle: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.015
+      });
     }
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    // Particle Shader / Material
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 1.2,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending
-    });
-
-    const particleSystem = new THREE.Points(geometry, particleMaterial);
-    scene.add(particleSystem);
-
-    // 3. 3D Floating Geometric Polyhedra (Diamonds & Sparkle Crystals)
-    const crystalGroup = new THREE.Group();
-    const crystalGeom = new THREE.OctahedronGeometry(1.2, 0);
-    const torusGeom = new THREE.TorusGeometry(1.4, 0.25, 12, 32);
-
-    const crystals = [];
-    for (let i = 0; i < 18; i++) {
-      const isTorus = i % 2 === 0;
-      const mat = new THREE.MeshPhongMaterial({
-        color: palette[i % palette.length],
-        shininess: 90,
-        specular: 0xffffff,
-        transparent: true,
-        opacity: 0.8
-      });
-
-      const mesh = new THREE.Mesh(isTorus ? torusGeom : crystalGeom, mat);
-      const angle = (i / 18) * Math.PI * 2;
-      const radius = 16 + (i % 3) * 4;
-
-      mesh.position.set(
-        Math.cos(angle) * radius,
-        Math.sin(angle) * radius + (Math.random() - 0.5) * 6,
-        (Math.random() - 0.5) * 15
-      );
-
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-      crystals.push({
-        mesh,
-        rotSpeedX: 0.01 + Math.random() * 0.02,
-        rotSpeedY: 0.015 + Math.random() * 0.02,
-        floatOffset: Math.random() * Math.PI * 2
-      });
-
-      crystalGroup.add(mesh);
-    }
-    scene.add(crystalGroup);
-
-    // 4. Ambient and Point Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
-    scene.add(ambientLight);
-
-    const pinkLight = new THREE.PointLight(0xff2b68, 3, 50);
-    pinkLight.position.set(10, 10, 20);
-    scene.add(pinkLight);
-
-    const purpleLight = new THREE.PointLight(0x9b20f0, 3, 50);
-    purpleLight.position.set(-10, -10, 20);
-    scene.add(purpleLight);
-
-    // 5. Animation Loop
-    let animationFrameId;
-    let clock = new THREE.Clock();
-
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
-
-      // Rotate particle cloud gently
-      particleSystem.rotation.y = elapsedTime * 0.08;
-      particleSystem.rotation.x = Math.sin(elapsedTime * 0.05) * 0.1;
-
-      // Animate 3D crystals orbiting and floating
-      crystals.forEach((c) => {
-        c.mesh.rotation.x += c.rotSpeedX;
-        c.mesh.rotation.y += c.rotSpeedY;
-        c.mesh.position.y += Math.sin(elapsedTime * 1.5 + c.floatOffset) * 0.015;
-      });
-
-      crystalGroup.rotation.z = elapsedTime * 0.04;
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    // 6. Resize Handler
     const handleResize = () => {
-      if (!container) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    const fov = 400;
+
+    const render = () => {
+      animId = requestAnimationFrame(render);
+      ctx.clearRect(0, 0, width, height);
+
+      const cx = width / 2;
+      const cy = height / 2;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Move towards screen in 3D
+        p.z -= p.speedZ;
+        p.angle += p.rotSpeed;
+
+        if (p.z <= 0) {
+          p.z = 800;
+          p.x = (Math.random() - 0.5) * width * 1.5;
+          p.y = (Math.random() - 0.5) * height * 1.5;
+        }
+
+        // Orbit rotation around center
+        const rx = p.x * Math.cos(p.angle) - p.y * Math.sin(p.angle);
+        const ry = p.x * Math.sin(p.angle) + p.y * Math.cos(p.angle);
+
+        // 3D Perspective Projection
+        const scale = fov / (fov + p.z);
+        const sx = cx + rx * scale;
+        const sy = cy + ry * scale;
+        const sr = p.radius * scale * 2.2;
+
+        if (sx >= 0 && sx <= width && sy >= 0 && sy <= height) {
+          const alpha = Math.min(1, Math.max(0.1, (1 - p.z / 800) * 1.2));
+          ctx.beginPath();
+          ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = alpha;
+          ctx.shadowBlur = 12 * scale;
+          ctx.shadowColor = p.color;
+          ctx.fill();
+        }
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     };
 
-    window.addEventListener('resize', handleResize);
+    render();
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
-      if (renderer.domElement && container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-      geometry.dispose();
-      particleMaterial.dispose();
-      crystalGeom.dispose();
-      torusGeom.dispose();
-      renderer.dispose();
+      cancelAnimationFrame(animId);
     };
   }, []);
 
-  return <div ref={mountRef} className="absolute inset-0 pointer-events-none z-0 overflow-hidden" />;
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0 overflow-hidden" />;
 };
 
 export const NewMatchCelebrationModal = () => {

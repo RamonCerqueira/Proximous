@@ -29,6 +29,7 @@ cd ..
 # 3. Compilar o Frontend Web React
 echo "⚛️ Compilando Frontend Web..."
 cd proximous-web
+pnpm install --no-frozen-lockfile 2>/dev/null || npm install --legacy-peer-deps 2>/dev/null || true
 npm run build || pnpm build
 cd ..
 
