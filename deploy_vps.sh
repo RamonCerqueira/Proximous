@@ -18,15 +18,23 @@ cat << 'EOF' > proximous_backend/.env.production
 FLASK_DEBUG=False
 PORT=8700
 HOST=0.0.0.0
-SECRET_KEY=proximous_super_secret_key_production_2025
+SECRET_KEY=e1f3a5b7c9d0e2f4a6b8c1d3e5f7a9b0c2d4e6f8a1b3c5d7e9f0a2b4c6d8e0f2
 
 # Banco de dados Supabase (PostgreSQL)
 DATABASE_URL=postgresql://postgres.zmozsnolufcqiwqxamhi:Ramondev123Proximous@aws-0-us-east-2.pooler.supabase.com:6543/postgres
 
 # JWT
-JWT_SECRET_KEY=proximous_jwt_secret_key_production_2025
+JWT_SECRET_KEY=c8f93e2b7a41904e5d6c8b1a3f0e7d5c9b2a4f6e8d1c3b5a7e9f0d2c4b6a8e1f
 JWT_ACCESS_TOKEN_EXPIRES=3600
 JWT_REFRESH_TOKEN_EXPIRES=2592000
+
+# Armazenamento & Cloudinary
+UPLOAD_FOLDER=/var/www/proximous/uploads
+MAX_CONTENT_LENGTH=16777216
+CLOUDINARY_CLOUD_NAME=vpoy3eep
+CLOUDINARY_API_KEY=936437946999226
+CLOUDINARY_API_SECRET=dv8zIK1LfJtsIu6BuyyPwC65bJM
+CLOUDINARY_URL=cloudinary://936437946999226:dv8zIK1LfJtsIu6BuyyPwC65bJM@vpoy3eep
 
 # Resend & PIX
 RESEND_API_KEY=re_123456789_sua_chave_resend
@@ -37,7 +45,7 @@ PIX_KEY=03207834566
 REDIS_URL=redis://localhost:6379/0
 
 # Segurança e CORS
-CORS_ORIGINS=http://proximous.genioplay.com.br,https://proximous.genioplay.com.br,http://153.75.244.238:8700,http://153.75.244.238:8701,http://153.75.244.238:8702,http://localhost:8701
+CORS_ORIGINS=http://proximous.genioplay.com.br,https://proximous.genioplay.com.br,http://153.75.244.238:8700,http://153.75.244.238:8701,http://153.75.244.238:8702,http://localhost:8701,http://localhost:5173
 RATE_LIMIT_ENABLED=True
 RATE_LIMIT_PER_MINUTE=60
 EOF

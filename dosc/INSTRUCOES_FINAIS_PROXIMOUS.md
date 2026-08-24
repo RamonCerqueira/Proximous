@@ -71,7 +71,7 @@ cd proximous_backend
 pip install -r requirements.txt
 python src/main.py
 ```
-**Porta**: 5000
+**Porta**: 5001 (http://localhost:5001)
 
 ### FRONTEND WEB (React)
 ```bash
@@ -79,7 +79,7 @@ cd proximous-web
 pnpm install
 pnpm dev
 ```
-**Porta**: 3000
+**Porta**: 5173 / 3000 (http://localhost:5173)
 
 ### APP MOBILE (React Native)
 ```bash
