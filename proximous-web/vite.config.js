@@ -21,32 +21,6 @@ export default defineConfig({
     allowedHosts: ['proximous.genioplay.com.br', '153.75.244.238', 'localhost', '127.0.0.1']
   },
   build: {
-    chunkSizeWarningLimit: 600,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('leaflet') || id.includes('react-leaflet')) {
-              return 'vendor-leaflet';
-            }
-            if (id.includes('emoji-picker-react')) {
-              return 'vendor-emoji';
-            }
-            if (id.includes('recharts') || id.includes('d3-')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('framer-motion')) {
-              return 'vendor-motion';
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'vendor-react';
-            }
-          }
-        }
-      }
-    }
+    chunkSizeWarningLimit: 1200
   }
 })
