@@ -104,6 +104,13 @@ export const SocialCreateActivityModal = ({
   const [radiusVisible, setRadiusVisible] = useState(true);
   const [maxParticipants, setMaxParticipants] = useState(4);
 
+  // Geocoding Autocomplete States
+  const [geoSuggestions, setGeoSuggestions] = useState([]);
+  const [isSearchingGeo, setIsSearchingGeo] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activityCoords, setActivityCoords] = useState(null); // { lat, lng }
+  const searchTimeoutRef = useRef(null);
+
   // Step 3: Invite State
   const [broadcastRadar, setBroadcastRadar] = useState(true);
   const [selectedInvitedIds, setSelectedInvitedIds] = useState(new Set());
@@ -116,14 +123,71 @@ export const SocialCreateActivityModal = ({
   useEffect(() => {
     if (show) {
       setStep(1);
-      if (!photoUrl) {
-        // Pre-select first suggestion for convenience or keep empty
-      }
       if (!location) {
         setLocation(`Rio Vermelho, ${initialLocation}`);
       }
+      setGeoSuggestions([]);
+      setShowSuggestions(false);
     }
   }, [show]);
+
+  const handleLocationSearch = (text) => {
+    setLocation(text);
+    if (!text || text.trim().length < 3) {
+      setGeoSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setIsSearchingGeo(true);
+        const query = text.trim();
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5&addressdetails=1`;
+        const res = await fetch(url, {
+          headers: {
+            'Accept-Language': 'pt-BR,pt;q=0.9',
+          }
+        });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setGeoSuggestions(data.map(item => {
+            const addr = item.address || {};
+            const mainName = addr.amenity || addr.road || addr.square || addr.park || addr.suburb || item.display_name.split(',')[0];
+            const city = addr.city || addr.town || addr.municipality || 'Salvador';
+            const state = addr.state_code || addr.state || 'BA';
+            const suburb = addr.suburb || addr.neighbourhood || '';
+            const subtitle = [suburb, `${city} - ${state}`].filter(Boolean).join(', ');
+            return {
+              display_name: item.display_name,
+              title: mainName,
+              subtitle: subtitle || item.display_name,
+              lat: parseFloat(item.lat),
+              lon: parseFloat(item.lon)
+            };
+          }));
+          setShowSuggestions(true);
+        } else {
+          setGeoSuggestions([]);
+        }
+      } catch (err) {
+        console.warn('Geocoding autocomplete notice:', err);
+      } finally {
+        setIsSearchingGeo(false);
+      }
+    }, 320);
+  };
+
+  const handleSelectGeoSuggestion = (sug) => {
+    setLocation(`${sug.title} • ${sug.subtitle}`);
+    setActivityCoords({ lat: sug.lat, lng: sug.lon });
+    setShowSuggestions(false);
+    setGeoSuggestions([]);
+  };
 
   if (!show) return null;
 
@@ -185,6 +249,8 @@ export const SocialCreateActivityModal = ({
         scheduled_time: whenText,
         description: description,
         photo_url: photoUrl,
+        latitude: activityCoords?.lat || undefined,
+        longitude: activityCoords?.lng || undefined,
         max_participants: parseInt(maxParticipants) || 4,
       };
 
@@ -573,28 +639,77 @@ export const SocialCreateActivityModal = ({
                   </div>
                 </div>
 
-                {/* Onde vai ser? */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-white block">Onde vai ser?</label>
+                {/* Onde vai ser? com Autocomplete de Localização */}
+                <div className="space-y-1.5 relative">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-white block">Onde vai ser?</label>
+                    {activityCoords && (
+                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        Ponto no mapa ativo
+                      </span>
+                    )}
+                  </div>
+
                   <div className="relative">
                     <MapPin className="w-3.5 h-3.5 text-pink-400 absolute left-3 top-3.5" />
                     <input
                       type="text"
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Ex: Café do Mirante, Rio Vermelho"
-                      className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-[#150F28] border border-white/10 text-white text-xs font-medium placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
+                      onChange={(e) => handleLocationSearch(e.target.value)}
+                      onFocus={() => {
+                        if (geoSuggestions.length > 0) setShowSuggestions(true);
+                      }}
+                      placeholder="Digite praça, praia, bar, restaurante... (ex: Praça da Madragoa)"
+                      className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-[#150F28] border border-white/10 text-white text-xs font-medium placeholder:text-zinc-500 focus:outline-none focus:border-purple-500 transition-colors"
                     />
-                    {location && (
+                    {isSearchingGeo ? (
+                      <div className="absolute right-2.5 top-3 w-3.5 h-3.5 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" />
+                    ) : location ? (
                       <button
                         type="button"
-                        onClick={() => setLocation('')}
+                        onClick={() => {
+                          setLocation('');
+                          setGeoSuggestions([]);
+                          setShowSuggestions(false);
+                          setActivityCoords(null);
+                        }}
                         className="absolute right-2.5 top-3 text-zinc-500 hover:text-zinc-300"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
-                    )}
+                    ) : null}
                   </div>
+
+                  {/* Autocomplete Suggestions Dropdown */}
+                  {showSuggestions && geoSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-[#160E2E] border border-purple-500/50 rounded-2xl p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.9)] max-h-52 overflow-y-auto space-y-1">
+                      <div className="px-2 py-1 text-[10px] font-black uppercase text-purple-300 tracking-wider flex items-center justify-between border-b border-white/5">
+                        <span>📍 Sugestões de Localização</span>
+                        <span className="text-zinc-400 font-normal">Toque para ativar no mapa</span>
+                      </div>
+                      {geoSuggestions.map((sug, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectGeoSuggestion(sug)}
+                          className="w-full text-left p-2 rounded-xl hover:bg-purple-600/25 transition-colors flex items-start gap-2.5 group"
+                        >
+                          <div className="p-1 rounded-lg bg-pink-500/20 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors shrink-0 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white truncate group-hover:text-pink-200">
+                              {sug.title}
+                            </p>
+                            <p className="text-[10px] text-zinc-400 truncate">
+                              {sug.subtitle}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {!showRefInput ? (
                     <button
@@ -609,7 +724,7 @@ export const SocialCreateActivityModal = ({
                       type="text"
                       value={locationRef}
                       onChange={(e) => setLocationRef(e.target.value)}
-                      placeholder="Ex: Próximo à praça de alimentação"
+                      placeholder="Ex: Próximo ao quiosque / Em frente à estátua"
                       className="w-full p-2 rounded-xl bg-[#120D24] border border-purple-500/20 text-white text-xs font-normal placeholder:text-zinc-600 focus:outline-none"
                     />
                   )}

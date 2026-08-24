@@ -36,6 +36,7 @@ import {
 import { getUserInitials, generateAvatarUrl } from '../lib/auth';
 import NotificationsDrawer from './NotificationsDrawer';
 import MatchCelebrationModal from './MatchCelebrationModal';
+import MandatoryProfilePhotosGuard from './MandatoryProfilePhotosGuard';
 import { initSocket, getSocket } from '../lib/socket';
 import { usersAPI } from '../lib/api';
 
@@ -298,9 +299,11 @@ const Layout = ({ children }) => {
         )}
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content Area guarded by mandatory photo requirement */}
       <main className="flex-1 pb-28 md:pb-8">
-        {children}
+        <MandatoryProfilePhotosGuard>
+          {children}
+        </MandatoryProfilePhotosGuard>
       </main>
 
       {/* MOBILE FLOATING BOTTOM DOCK WITH ANIMATED SLIDING GLOW PILL */}

@@ -91,36 +91,65 @@ const createAvatarIcon = (photoUrl, gender) => {
 };
 
 // Custom Marker for Spontaneous Events / Invites
-const createEventIcon = (category) => {
-  const emojiMap = {
-    coffee: '☕',
-    drinks: '🍻',
-    sports: '🏃',
-    culture: '🎭',
-    games: '🎮',
-    other: '🎉'
-  };
-  const emoji = emojiMap[category] || '⚡';
+const createEventIcon = (category, title = '') => {
+  const text = `${category || ''} ${title || ''}`.toLowerCase();
+  let emoji = '⚡';
+  let badgeColor = 'linear-gradient(135deg, #FF2B68 0%, #D414A8 50%, #9B20F0 100%)';
+  let pingColor = 'rgba(255, 43, 104, 0.5)';
+
+  if (text.includes('café') || text.includes('cafe') || text.includes('coffee')) {
+    emoji = '☕';
+    badgeColor = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
+    pingColor = 'rgba(245, 158, 11, 0.5)';
+  } else if (text.includes('drink') || text.includes('bar') || text.includes('rooftop')) {
+    emoji = '🍸';
+    badgeColor = 'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)';
+    pingColor = 'rgba(236, 72, 153, 0.5)';
+  } else if (text.includes('tennis') || text.includes('beach') || text.includes('esporte') || text.includes('corrida') || text.includes('sport')) {
+    emoji = '🎾';
+    badgeColor = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+    pingColor = 'rgba(16, 185, 129, 0.5)';
+  } else if (text.includes('cinema') || text.includes('filme') || text.includes('pipoca')) {
+    emoji = '🍿';
+    badgeColor = 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)';
+    pingColor = 'rgba(139, 92, 246, 0.5)';
+  } else if (text.includes('pizza') || text.includes('jantar') || text.includes('gastro')) {
+    emoji = '🍕';
+    badgeColor = 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)';
+    pingColor = 'rgba(239, 68, 68, 0.5)';
+  } else if (text.includes('pet') || text.includes('cachorro')) {
+    emoji = '🐶';
+    badgeColor = 'linear-gradient(135deg, #F97316 0%, #C2410C 100%)';
+    pingColor = 'rgba(249, 115, 22, 0.5)';
+  } else if (text.includes('música') || text.includes('jam') || text.includes('violão')) {
+    emoji = '🎸';
+    badgeColor = 'linear-gradient(135deg, #6366F1 0%, #4338CA 100%)';
+    pingColor = 'rgba(99, 102, 241, 0.5)';
+  } else if (text.includes('board') || text.includes('jogo') || text.includes('game')) {
+    emoji = '🎮';
+    badgeColor = 'linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)';
+    pingColor = 'rgba(6, 182, 212, 0.5)';
+  }
 
   return L.divIcon({
     className: 'custom-event-marker',
     html: `
-      <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: relative; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
         <div style="
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(255, 43, 104, 0.4);
-          animation: ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+          background: ${pingColor};
+          animation: ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
         "></div>
         <div style="
           position: relative;
           width: 44px;
           height: 44px;
-          background: linear-gradient(135deg, #FF2B68 0%, #D414A8 50%, #9B20F0 100%);
+          background: ${badgeColor};
           border: 3px solid #ffffff;
           border-radius: 50%;
-          box-shadow: 0 4px 22px rgba(255, 43, 104, 0.6);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.6);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -131,9 +160,9 @@ const createEventIcon = (category) => {
         </div>
       </div>
     `,
-    iconSize: [48, 48],
-    iconAnchor: [24, 24],
-    popupAnchor: [0, -24]
+    iconSize: [50, 50],
+    iconAnchor: [25, 25],
+    popupAnchor: [0, -26]
   });
 };
 
@@ -448,30 +477,35 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
             <Marker
               key={evt.id}
               position={[evt.latitude || lat + 0.003, evt.longitude || lng + 0.004]}
-              icon={createEventIcon(evt.category)}
+              icon={createEventIcon(evt.category, evt.title)}
             >
               <Popup className="custom-leaflet-popup">
-                <div className="p-3 max-w-[220px] text-center space-y-2">
-                  <Badge className="bg-[#FF2B68] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
-                    🎉 {evt.category || 'Convite'}
-                  </Badge>
+                <div className="p-2.5 max-w-[240px] text-center space-y-2">
+                  {evt.photo_url && (
+                    <div className="w-full h-24 rounded-xl overflow-hidden mb-1 relative border border-purple-200">
+                      <img src={evt.photo_url} alt={evt.title} className="w-full h-full object-cover" />
+                      <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-black text-white">
+                        {evt.category || 'Rolê'}
+                      </div>
+                    </div>
+                  )}
 
-                  <h4 className="font-extrabold text-slate-900 text-sm leading-tight">
+                  <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight text-left">
                     {evt.title}
                   </h4>
 
-                  <div className="text-[11px] text-slate-700 space-y-1 font-medium text-left bg-purple-50 p-2 rounded-xl border border-purple-100">
-                    <p className="flex items-center gap-1 text-purple-700 font-bold">
-                      <MapPin className="h-3 w-3 text-[#9B20F0]" />
-                      <span>{evt.location_name || 'São Paulo'}</span>
+                  <div className="text-[11px] text-slate-700 space-y-1 font-medium text-left bg-purple-50/80 p-2 rounded-xl border border-purple-100">
+                    <p className="flex items-center gap-1 text-purple-800 font-bold truncate">
+                      <MapPin className="h-3 w-3 text-[#9B20F0] shrink-0" />
+                      <span className="truncate">{evt.location_name || 'Salvador, BA'}</span>
                     </p>
                     <p className="flex items-center gap-1 text-emerald-700 font-bold">
-                      <Clock className="h-3 w-3 text-emerald-600" />
+                      <Clock className="h-3 w-3 text-emerald-600 shrink-0" />
                       <span>{evt.scheduled_time || 'Hoje'}</span>
                     </p>
                     <p className="flex items-center gap-1 text-pink-700 font-bold">
-                      <Users className="h-3 w-3 text-[#FF4FA3]" />
-                      <span>{evt.participant_count || 1}/{evt.max_participants || 2} Vagas</span>
+                      <Users className="h-3 w-3 text-[#FF4FA3] shrink-0" />
+                      <span>{evt.participant_count || 1}/{evt.max_participants || 4} Vagas</span>
                     </p>
                   </div>
 
@@ -480,7 +514,7 @@ const NearbyMap = ({ radius = 15, fullHeight = false }) => {
                     size="sm"
                     className="w-full h-8 text-xs bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white font-black rounded-xl shadow-md hover:opacity-95 flex items-center justify-center gap-1"
                   >
-                    <UserPlus className="h-3.5 w-3.5" /> Quero ir! 🙋‍♂️
+                    <UserPlus className="h-3.5 w-3.5" /> Quero ir! ⚡
                   </Button>
                 </div>
               </Popup>

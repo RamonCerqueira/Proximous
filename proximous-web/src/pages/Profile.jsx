@@ -394,8 +394,8 @@ const Profile = () => {
 
   const handleRemovePhoto = async (photoUrl) => {
     setPhotoError('');
-    if (formData.photos.length <= 1) {
-      setPhotoError('Atenção: Seu perfil precisa manter pelo menos 1 foto!');
+    if (formData.photos.length <= 2) {
+      setPhotoError('⚠️ Atenção: É obrigatório manter no mínimo 2 fotos no perfil para continuar ativo e poder curtir/dar match.');
       return;
     }
 

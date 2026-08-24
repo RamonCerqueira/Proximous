@@ -61,6 +61,13 @@ def send_like():
         if receiver_id == current_user_id:
             return jsonify({'error': 'Cannot like yourself'}), 400
         
+        # Check if user has at least 2 photos
+        if not current_user.has_required_photos():
+            return jsonify({
+                'error': 'Você precisa ter pelo menos 2 fotos no seu perfil para curtir e dar match.',
+                'code': 'PROFILE_PHOTOS_REQUIRED'
+            }), 403
+        
         # Check if receiver exists and is active
         receiver = User.query.get(receiver_id)
         if not receiver or not receiver.is_active or not receiver.is_visible:

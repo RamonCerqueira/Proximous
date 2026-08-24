@@ -97,6 +97,9 @@ def get_nearby_activities():
         # If no activities in DB yet, generate contextual nearby activities based on user's location
         if len(nearby_activities) == 0:
             user_city = current_user.location_city or "Sua Região"
+            user_lat = current_user.latitude or -12.9714
+            user_lon = current_user.longitude or -38.5014
+
             mock_seeds = [
                 {
                     'id': 'act_seed_1',
@@ -108,6 +111,8 @@ def get_nearby_activities():
                     'description': 'Procurando alguém para tomar um bom expresso artesanal e conversar sobre viagens, livros ou tecnologia.',
                     'location_name': f'Cafeteria Central • {user_city}',
                     'scheduled_time': 'Hoje às 17:30',
+                    'latitude': user_lat + 0.006,
+                    'longitude': user_lon - 0.005,
                     'distance_km': 1.2,
                     'distance_range': '1,2 km de você',
                     'max_participants': 2,
@@ -127,6 +132,8 @@ def get_nearby_activities():
                     'description': 'Música boa, drinks autorais e clima descontraído para relaxar no início da noite.',
                     'location_name': f'Lounge & Rooftop • {user_city}',
                     'scheduled_time': 'Hoje às 19:45',
+                    'latitude': user_lat + 0.012,
+                    'longitude': user_lon + 0.008,
                     'distance_km': 2.8,
                     'distance_range': '2,8 km de você',
                     'max_participants': 4,
@@ -146,6 +153,8 @@ def get_nearby_activities():
                     'description': 'Aluguei a quadra de areia para um jogo descontraído. Falta uma pessoa para fechar a dupla!',
                     'location_name': f'Arena Beach Sports • {user_city}',
                     'scheduled_time': 'Hoje às 18:00',
+                    'latitude': user_lat - 0.008,
+                    'longitude': user_lon - 0.010,
                     'distance_km': 1.6,
                     'distance_range': '1,6 km de você',
                     'max_participants': 4,
@@ -165,6 +174,8 @@ def get_nearby_activities():
                     'description': 'Assistir lançamento no cinema e depois comentar o filme em uma lanchonete bacana.',
                     'location_name': f'Shopping Cinema • {user_city}',
                     'scheduled_time': 'Hoje às 20:30',
+                    'latitude': user_lat + 0.018,
+                    'longitude': user_lon + 0.014,
                     'distance_km': 4.2,
                     'distance_range': '4,2 km de você',
                     'max_participants': 3,
@@ -184,6 +195,8 @@ def get_nearby_activities():
                     'description': 'Lugar aconchegante com pizza de fermentação natural e bons vinhos. Venha com boa energia!',
                     'location_name': f'Trattoria & Forno • {user_city}',
                     'scheduled_time': 'Hoje às 20:00',
+                    'latitude': user_lat - 0.007,
+                    'longitude': user_lon + 0.012,
                     'distance_km': 1.9,
                     'distance_range': '1,9 km de você',
                     'max_participants': 4,
@@ -203,6 +216,8 @@ def get_nearby_activities():
                     'description': 'Levar os pets para brincar e socializar na praça. Todos os portes são bem-vindos!',
                     'location_name': f'Parcão Municipal • {user_city}',
                     'scheduled_time': 'Hoje às 16:30',
+                    'latitude': user_lat + 0.004,
+                    'longitude': user_lon + 0.009,
                     'distance_km': 2.1,
                     'distance_range': '2,1 km de você',
                     'max_participants': 5,
@@ -222,6 +237,8 @@ def get_nearby_activities():
                     'description': 'Leve seu instrumento (violão, cajón, ukelele) ou só venha ouvir um bom som ao ar livre.',
                     'location_name': f'Gramado do Parque • {user_city}',
                     'scheduled_time': 'Hoje às 17:00',
+                    'latitude': user_lat - 0.009,
+                    'longitude': user_lon - 0.006,
                     'distance_km': 3.3,
                     'distance_range': '3,3 km de você',
                     'max_participants': 6,
@@ -241,6 +258,8 @@ def get_nearby_activities():
                     'description': 'Catan, Dixit e Exploding Kittens em luderia especializada. Ensino a jogar para quem nunca jogou!',
                     'location_name': f'Luderia & Burgers • {user_city}',
                     'scheduled_time': 'Hoje às 19:00',
+                    'latitude': user_lat + 0.014,
+                    'longitude': user_lon - 0.007,
                     'distance_km': 2.7,
                     'distance_range': '2,7 km de você',
                     'max_participants': 4,
