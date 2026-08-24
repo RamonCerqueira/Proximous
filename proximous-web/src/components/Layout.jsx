@@ -139,18 +139,25 @@ const Layout = ({ children }) => {
           <div className="flex h-16 sm:h-20 items-center justify-between gap-4">
             
             {/* Logo Brand */}
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-tr from-[#9B20F0] via-[#D414A8] to-[#FF2B68] rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(214,20,168,0.4)] group-hover:scale-105 transition-transform duration-300">
-                <Heart className="w-5 h-5 text-white fill-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-[#A020F0] to-[#FF4FA3] bg-clip-text text-transparent">
-                  Proximous
-                </span>
-                <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#AAA5BA] -mt-1 hidden sm:block">
-                  Social Discovery
-                </span>
-              </div>
+            <Link to="/" className="flex items-center space-x-2.5 group">
+              <img
+                src={isDark !== false ? '/iconBranco.png' : '/iconblack.png'}
+                alt="Proximous"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/logoP.png';
+                }}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              />
+              <img
+                src="/logoProximouCompleta.png"
+                alt="Proximous"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/logoProximou.png';
+                }}
+                className="h-8 sm:h-9 w-auto object-contain hidden sm:block"
+              />
             </Link>
 
             {/* Desktop Navigation Header with Animated Sliding Pill */}

@@ -36,7 +36,16 @@ export const LandingPage = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           
           {/* Logo Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <img 
+              src="/iconBranco.png" 
+              alt="Proximous Icon" 
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/logoP.png';
+              }}
+              className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105"
+            />
             <img 
               src="/logoProximouCompleta.png" 
               alt="Proximous" 
@@ -44,7 +53,7 @@ export const LandingPage = () => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = '/logoProximou.png';
               }}
-              className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105"
             />
           </Link>
 
