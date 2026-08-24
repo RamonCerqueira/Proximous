@@ -929,279 +929,451 @@ export const Profile = () => {
       {/* 5. SLIDE-OVER / MODAL DE EDIÇÃO DO PERFIL */}
       <AnimatePresence>
         {isEditModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 20 }}
-              className="relative w-full max-w-2xl bg-gradient-to-b from-[#181133] via-[#0E0920] to-[#070512] border border-purple-500/40 rounded-[32px] p-5 sm:p-8 shadow-2xl space-y-6 my-auto text-white"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-2xl max-h-[92vh] flex flex-col bg-gradient-to-b from-[#191136] via-[#0F0A24] to-[#070512] border border-purple-500/40 rounded-[32px] shadow-[0_25px_80px_rgba(0,0,0,0.95)] text-white overflow-hidden"
             >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-purple-600/30 text-purple-300">
+              {/* Modal Header (Fixed) */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 bg-[#160E30]/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white shadow-lg">
                     <Edit3 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-white">Editar Perfil</h2>
-                    <p className="text-xs text-zinc-400">Personalize suas fotos e informações.</p>
+                    <h2 className="text-lg sm:text-xl font-black text-white">Editar Perfil VIP</h2>
+                    <p className="text-xs text-zinc-400">Personalize suas fotos, bio e preferências.</p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Sub-tabs for Edit Mode */}
-              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#120B24] border border-white/5">
-                {[
-                  { id: 'photos', label: '📸 Fotos' },
-                  { id: 'basic', label: '👤 Dados & Bio' },
-                  { id: 'interests', label: '🎯 Interesses' },
-                  { id: 'status', label: '⚡ Status Ao Vivo' }
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setEditTab(st.id)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
-                      editTab === st.id
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
+              {/* Sub-tabs Bar (Fixed) */}
+              <div className="px-6 pt-3 pb-2 shrink-0 bg-[#120B28]/60 border-b border-white/5">
+                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0B061A] border border-white/10 overflow-x-auto no-scrollbar">
+                  {[
+                    { id: 'photos', label: '📸 Fotos' },
+                    { id: 'basic', label: '👤 Dados & Bio' },
+                    { id: 'interests', label: '🎯 Interesses' },
+                    { id: 'status', label: '⚡ Status Radar' }
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setEditTab(st.id)}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                        editTab === st.id
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+                          : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Edit Tab 1: Fotos */}
-              {editTab === 'photos' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-zinc-300">
-                      Galeria de Fotos ({editForm.photos.length}/6) - Mínimo 2 Obrigatórias
-                    </label>
-                    <Button
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingPhoto || editForm.photos.length >= MAX_PHOTOS}
-                      className="h-8 text-xs font-bold bg-pink-600 hover:bg-pink-700 text-white rounded-xl"
-                    >
-                      <Upload className="w-3.5 h-3.5 mr-1" />
-                      Enviar Foto
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    {editForm.photos.map((ph, idx) => (
-                      <div key={idx} className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-purple-500/30 group">
-                        <img src={ph} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                        {idx === 0 && (
-                          <span className="absolute top-1 left-1 px-2 py-0.5 rounded-md bg-black/70 text-[9px] font-black text-amber-300">
-                            Principal
-                          </span>
-                        )}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          {idx !== 0 && (
-                            <button
-                              type="button"
-                              onClick={() => handleSetPrimaryPhoto(ph)}
-                              className="p-1.5 rounded-full bg-purple-600 text-white"
-                              title="Definir como Principal"
-                            >
-                              ⭐
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(ph)}
-                            className="p-1.5 rounded-full bg-red-600 text-white"
-                            title="Remover"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+              {/* Modal Body (Scrollable) */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                {/* 1. ABA FOTOS */}
+                {editTab === 'photos' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-black text-purple-200 uppercase tracking-wider">
+                          Sua Galeria ({editForm.photos.length}/6)
+                        </h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Mínimo de 2 fotos obrigatórias. Arraste ou clique para gerenciar.
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Edit Tab 2: Dados Básicos */}
-              {editTab === 'basic' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">Nome de Exibição</label>
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">Idade</label>
-                      <input
-                        type="number"
-                        value={editForm.age}
-                        onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-300">Bio / Sobre Você</label>
-                    <textarea
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                      rows={3}
-                      placeholder="Fale sobre seus gostos, hobbies e o que busca..."
-                      className="w-full p-3 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500 resize-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">Cidade</label>
-                      <input
-                        type="text"
-                        value={editForm.location_city}
-                        onChange={(e) => setEditForm({ ...editForm, location_city: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">Estilo Social</label>
-                      <select
-                        value={editForm.social_style}
-                        onChange={(e) => setEditForm({ ...editForm, social_style: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
+                      <Button
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingPhoto || editForm.photos.length >= MAX_PHOTOS}
+                        className="rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-black h-8 shadow-md"
                       >
-                        <option value="introverted">Introvertido(a)</option>
-                        <option value="shy">Tímido(a)</option>
-                        <option value="flexible">Flexível / Adaptável</option>
-                        <option value="extroverted">Extrovertido(a)</option>
-                      </select>
+                        {uploadingPhoto ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                        ) : (
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                        )}
+                        Adicionar Foto
+                      </Button>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Edit Tab 3: Interesses & Personalidade */}
-              {editTab === 'interests' && (
-                <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-purple-300 uppercase">Tags de Personalidade</label>
-                    <div className="flex flex-wrap gap-2">
-                      {PERSONALITY_TAGS_OPTIONS.map((tag) => {
-                        const active = editForm.personality_tags.includes(tag);
+                    {/* 6 Photo Slots Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                      {[0, 1, 2, 3, 4, 5].map((slotIndex) => {
+                        const photo = editForm.photos[slotIndex];
                         return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => handleTogglePersonalityTag(tag)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                              active
-                                ? 'bg-purple-600 border-purple-400 text-white shadow-md'
-                                : 'bg-[#120B24] border-white/10 text-zinc-400 hover:text-white'
+                          <div
+                            key={slotIndex}
+                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden border-2 transition-all ${
+                              photo 
+                                ? 'border-purple-500/40 bg-[#120B28] shadow-md group' 
+                                : slotIndex < 2 
+                                  ? 'border-dashed border-pink-500/50 bg-pink-950/10 hover:bg-pink-950/20' 
+                                  : 'border-dashed border-white/10 bg-white/5 hover:bg-white/10'
                             }`}
                           >
-                            {tag}
-                          </button>
+                            {photo ? (
+                              <>
+                                <img src={photo} alt={`Slot ${slotIndex + 1}`} className="w-full h-full object-cover" />
+                                
+                                {/* Slot Badge */}
+                                <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-black shadow-lg backdrop-blur-md ${
+                                  slotIndex === 0 
+                                    ? 'bg-black/75 text-amber-300 border border-amber-500/40' 
+                                    : 'bg-black/75 text-zinc-200 border border-white/10'
+                                }`}>
+                                  {slotIndex === 0 ? '⭐ Principal' : `Foto ${slotIndex + 1}`}
+                                </span>
+
+                                {/* Hover Action Controls */}
+                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2.5">
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemovePhoto(photo)}
+                                      className="p-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg"
+                                      title="Remover"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  {slotIndex !== 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetPrimaryPhoto(photo)}
+                                      className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black shadow-lg"
+                                    >
+                                      Tornar Principal
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingPhoto}
+                                className="w-full h-full flex flex-col items-center justify-center p-3 text-center space-y-1.5 cursor-pointer"
+                              >
+                                <div className={`p-2 rounded-full ${slotIndex < 2 ? 'bg-pink-500/20 text-pink-300' : 'bg-white/5 text-zinc-400'}`}>
+                                  <Camera className="w-4 h-4" />
+                                </div>
+                                <span className="text-[11px] font-black text-white">
+                                  {slotIndex === 0 ? 'Foto de Rosto' : slotIndex === 1 ? 'Foto de Corpo' : '+ Foto Extra'}
+                                </span>
+                                <span className={`text-[9px] font-bold uppercase ${slotIndex < 2 ? 'text-pink-400' : 'text-zinc-500'}`}>
+                                  {slotIndex < 2 ? 'Obrigatória' : 'Opcional'}
+                                </span>
+                              </button>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
                   </div>
+                )}
 
-                  <div className="space-y-2 pt-2">
-                    <label className="text-xs font-bold text-pink-300 uppercase">Interesses & Hobbies</label>
-                    <div className="space-y-3">
-                      {INTEREST_PRESETS.map((cat, idx) => (
-                        <div key={idx} className="space-y-1.5">
-                          <p className="text-[11px] font-bold text-zinc-400">{cat.category}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {cat.items.map((item) => {
-                              const active = editForm.interests.includes(item);
-                              return (
-                                <button
-                                  key={item}
-                                  type="button"
-                                  onClick={() => handleToggleInterest(item)}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                                    active
-                                      ? 'bg-pink-600 border-pink-400 text-white'
-                                      : 'bg-[#120B24] border-white/5 text-zinc-400 hover:text-white'
-                                  }`}
-                                >
-                                  {item}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                {/* 2. ABA DADOS BÁSICOS & BIO */}
+                {editTab === 'basic' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-zinc-300">Nome de Exibição</label>
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          placeholder="Seu nome"
+                          className="w-full p-3 rounded-xl bg-[#120B28] border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-500 transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-zinc-300">Idade</label>
+                        <input
+                          type="number"
+                          value={editForm.age}
+                          onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                          min={18}
+                          max={99}
+                          className="w-full p-3 rounded-xl bg-[#120B28] border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gênero Selector */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300">Gênero</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'female', label: '👩 Feminino' },
+                          { id: 'male', label: '👨 Masculino' },
+                          { id: 'non_binary', label: '✨ Não-binário' }
+                        ].map((g) => (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, gender: g.id })}
+                            className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${
+                              editForm.gender === g.id
+                                ? 'bg-purple-600 border-purple-400 text-white shadow-md'
+                                : 'bg-[#120B28] border-white/10 text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cidade */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300">Sua Cidade</label>
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 text-pink-400 absolute left-3.5 top-3.5" />
+                        <input
+                          type="text"
+                          value={editForm.location_city}
+                          onChange={(e) => setEditForm({ ...editForm, location_city: e.target.value })}
+                          placeholder="Ex: Salvador, BA"
+                          className="w-full pl-10 pr-3 py-3 rounded-xl bg-[#120B28] border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Estilo Social */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300">Estilo Social</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { id: 'introverted', label: '🧘 Introvertido', sub: 'Prefere lugares calmos' },
+                          { id: 'shy', label: '🌱 Tímido', sub: 'Observador e tranquilo' },
+                          { id: 'flexible', label: '✨ Flexível', sub: 'Topa qualquer rolê' },
+                          { id: 'extroverted', label: '⚡ Extrovertido', sub: 'Adora fazer amizades' }
+                        ].map((st) => (
+                          <button
+                            key={st.id}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, social_style: st.id })}
+                            className={`p-2.5 rounded-xl text-left border transition-all ${
+                              editForm.social_style === st.id
+                                ? 'bg-purple-950/80 border-purple-400 text-white shadow-md'
+                                : 'bg-[#120B28] border-white/10 text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            <p className="text-xs font-bold">{st.label}</p>
+                            <p className="text-[10px] text-zinc-400 truncate">{st.sub}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-zinc-300">Bio / Sobre Você</label>
+                        <span className="text-[10px] text-zinc-500 font-medium">
+                          {editForm.bio.length}/300 caracteres
+                        </span>
+                      </div>
+                      <textarea
+                        value={editForm.bio}
+                        onChange={(e) => setEditForm({ ...editForm, bio: e.target.value.slice(0, 300) })}
+                        rows={3}
+                        placeholder="Escreva sobre o que você curte fazer, seus lugares favoritos e o tipo de pessoas que quer conhecer..."
+                        className="w-full p-3.5 rounded-2xl bg-[#120B28] border border-white/10 text-white text-xs font-normal focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
+                      />
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Edit Tab 4: Status Ao Vivo */}
-              {editTab === 'status' && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-300">Status no Radar Agora</label>
-                    <input
-                      type="text"
-                      value={editForm.current_status_text}
-                      onChange={(e) => setEditForm({ ...editForm, current_status_text: e.target.value })}
-                      placeholder="Ex: Tomando um café no Rio Vermelho ☕"
-                      className="w-full p-3 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                    />
+                {/* 3. ABA INTERESSES & PERSONALIDADE */}
+                {editTab === 'interests' && (
+                  <div className="space-y-5">
+                    {/* Tags de Personalidade */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-purple-300 uppercase tracking-wider">
+                          Tags de Personalidade ({editForm.personality_tags.length}/8)
+                        </label>
+                        <span className="text-[10px] text-zinc-400">Toque para selecionar</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {PERSONALITY_TAGS_OPTIONS.map((tag) => {
+                          const active = editForm.personality_tags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleTogglePersonalityTag(tag)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                active
+                                  ? 'bg-purple-600 border-purple-400 text-white shadow-md'
+                                  : 'bg-[#120B28] border-white/10 text-zinc-400 hover:text-white'
+                              }`}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Interesses por Categoria */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-pink-300 uppercase tracking-wider">
+                          Interesses & Hobbies ({editForm.interests.length}/15)
+                        </label>
+                        <span className="text-[10px] text-zinc-400">Selecione seus favoritos</span>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {INTEREST_PRESETS.map((cat, idx) => (
+                          <div key={idx} className="space-y-1.5 p-3 rounded-2xl bg-[#120B28]/60 border border-white/5">
+                            <p className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                              <cat.icon className="w-3.5 h-3.5 text-pink-400" />
+                              <span>{cat.category}</span>
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.items.map((item) => {
+                                const active = editForm.interests.includes(item);
+                                return (
+                                  <button
+                                    key={item}
+                                    type="button"
+                                    onClick={() => handleToggleInterest(item)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                      active
+                                        ? 'bg-pink-600 border-pink-400 text-white shadow-sm'
+                                        : 'bg-[#0B071A] border-white/10 text-zinc-400 hover:text-white'
+                                    }`}
+                                  >
+                                    {item}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-300">Duração do Status</label>
-                    <select
-                      value={editForm.available_until_hours}
-                      onChange={(e) => setEditForm({ ...editForm, available_until_hours: parseInt(e.target.value) })}
-                      className="w-full p-2.5 rounded-xl bg-[#120B24] border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                    >
-                      <option value={2}>2 horas</option>
-                      <option value={4}>4 horas</option>
-                      <option value={8}>8 horas</option>
-                      <option value={24}>Até amanhã</option>
-                    </select>
+                {/* 4. ABA STATUS NO RADAR */}
+                {editTab === 'status' && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+                      <p className="text-xs font-black text-purple-200 uppercase tracking-wider flex items-center gap-1.5">
+                        <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+                        <span>Status ao Vivo no Radar</span>
+                      </p>
+                      <p className="text-xs text-zinc-300">
+                        Seu status aparece destacado para as pessoas próximas a você no mapa e no radar.
+                      </p>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-300">Sugestões Rápidas</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          '☕ Tomando um café',
+                          '🍸 Drinks pós-trabalho',
+                          '🎾 Beach Tennis / Treino',
+                          '⚡ Livre para conversar',
+                          '🍕 Rota da Pizza',
+                          '💻 No coworking / Focado'
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, current_status_text: preset })}
+                            className="p-2 rounded-xl bg-[#120B28] border border-white/10 hover:border-purple-500/50 text-left text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300">Status Personalizado</label>
+                      <input
+                        type="text"
+                        value={editForm.current_status_text}
+                        onChange={(e) => setEditForm({ ...editForm, current_status_text: e.target.value })}
+                        placeholder="Ex: Passeando com o pet no parque 🐶"
+                        className="w-full p-3 rounded-xl bg-[#120B28] border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300">Tempo de Ativação do Status</label>
+                      <select
+                        value={editForm.available_until_hours}
+                        onChange={(e) => setEditForm({ ...editForm, available_until_hours: parseInt(e.target.value) })}
+                        className="w-full p-3 rounded-xl bg-[#120B28] border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-500"
+                      >
+                        <option value={2}>Ativo pelas próximas 2 horas</option>
+                        <option value={4}>Ativo pelas próximas 4 horas</option>
+                        <option value={8}>Ativo pelas próximas 8 horas</option>
+                        <option value={24}>Ativo até amanhã</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Modal Save Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              </div>
+
+              {/* Modal Sticky Footer (Always Visible) */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 shrink-0 bg-[#160E30]/90 backdrop-blur-md">
                 <Button
+                  type="button"
                   variant="ghost"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="text-zinc-400 hover:text-white text-xs font-bold"
+                  className="text-zinc-400 hover:text-white text-xs font-bold h-10 px-4"
                 >
                   Cancelar
                 </Button>
 
                 <Button
+                  type="button"
                   onClick={handleSaveProfile}
-                  disabled={savingEdit}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-xs shadow-xl hover:opacity-95"
+                  disabled={savingEdit || editForm.photos.length < MIN_PHOTOS}
+                  className={`h-10 px-6 rounded-xl font-black text-xs shadow-xl transition-all flex items-center gap-2 ${
+                    editForm.photos.length >= MIN_PHOTOS
+                      ? 'bg-gradient-to-r from-[#9B20F0] via-[#D414A8] to-[#FF2B68] text-white hover:opacity-95 shadow-pink-500/25 cursor-pointer'
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/5'
+                  }`}
                 >
                   {savingEdit ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
-                  ) : null}
-                  Salvar Perfil
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Salvar Perfil</span>
+                      <Check className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </div>
 
