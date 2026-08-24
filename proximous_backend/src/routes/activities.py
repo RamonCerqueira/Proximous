@@ -16,10 +16,24 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def archive_expired_activities():
+    """Automatically archive activities whose date/time has passed."""
+    try:
+        now = datetime.utcnow()
+        Activity.query.filter(
+            Activity.status == 'active',
+            Activity.expires_at != None,
+            Activity.expires_at <= now
+        ).update({'status': 'expired'}, synchronize_session=False)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+
 @activities_bp.route('/categories', methods=['GET'])
 @jwt_required()
 def get_activity_categories():
     try:
+        archive_expired_activities()
         # Get all distinct categories from active activities in DB
         now = datetime.utcnow()
         active_cats = db.session.query(Activity.category).filter(
@@ -59,6 +73,7 @@ def get_activity_categories():
 @jwt_required()
 def get_nearby_activities():
     try:
+        archive_expired_activities()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
@@ -303,21 +318,38 @@ def create_activity():
         lat = data.get('latitude', current_user.latitude or -12.9714)
         lng = data.get('longitude', current_user.longitude or -38.5014)
         
-        duration_hours = int(data.get('duration_hours', 8))
-        expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
+        custom_expires_at = data.get('expires_at')
+        if custom_expires_at:
+            try:
+                expires_at = datetime.fromisoformat(custom_expires_at.replace('Z', '+00:00')).replace(tzinfo=None)
+            except Exception:
+                duration_hours = int(data.get('duration_hours', 6))
+                expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
+        else:
+            duration_hours = int(data.get('duration_hours', 6))
+            expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
         
+        user_primary_photo = current_user.profile_photo_url
+        if not user_primary_photo:
+            u_photos = current_user.get_photos()
+            if u_photos and len(u_photos) > 0:
+                user_primary_photo = u_photos[0]
+
+        activity_photo = data.get('photo_url') or user_primary_photo
+
         activity = Activity(
             user_id=current_user_id,
             category=data.get('category'),
             title=data.get('title'),
             description=data.get('description', ''),
-            photo_url=data.get('photo_url'),
+            photo_url=activity_photo,
             location_name=data.get('location_name', current_user.location_city or 'Salvador, BA'),
             scheduled_time=data.get('scheduled_time', 'Hoje mais tarde'),
             latitude=lat,
             longitude=lng,
             max_participants=int(data.get('max_participants', 2)),
-            expires_at=expires_at
+            expires_at=expires_at,
+            status='active'
         )
         
         db.session.add(activity)
@@ -342,6 +374,7 @@ def create_activity():
 @jwt_required()
 def join_activity(activity_id):
     try:
+        archive_expired_activities()
         current_user_id = get_jwt_identity()
         activity = Activity.query.get(activity_id)
         
@@ -459,16 +492,32 @@ def delete_activity(activity_id):
 @jwt_required()
 def get_my_activities():
     try:
+        archive_expired_activities()
         current_user_id = get_jwt_identity()
+        include_archived = request.args.get('include_archived', '').lower() in ('true', '1')
+
         participations = ActivityParticipant.query.filter_by(user_id=current_user_id).all()
         participated_act_ids = [p.activity_id for p in participations]
         
         # All activities created by the current user
-        created_acts = Activity.query.filter_by(user_id=current_user_id).order_by(Activity.created_at.desc()).all()
+        created_acts = Activity.query.filter_by(user_id=current_user_id).all()
         created_ids = [a.id for a in created_acts]
         
         all_ids = list(set(participated_act_ids + created_ids))
-        all_activities = Activity.query.filter(Activity.id.in_(all_ids)).order_by(Activity.created_at.desc()).all() if all_ids else []
+        if not all_ids:
+            return jsonify({
+                'created_activities': [],
+                'requested_activities': [],
+                'pending_requests_count': 0,
+                'activities': []
+            }), 200
+
+        query = Activity.query.filter(Activity.id.in_(all_ids))
+        if not include_archived:
+            now = datetime.utcnow()
+            query = query.filter(Activity.status == 'active', Activity.expires_at > now)
+
+        all_activities = query.order_by(Activity.created_at.desc()).all()
         
         created_list = []
         requested_list = []

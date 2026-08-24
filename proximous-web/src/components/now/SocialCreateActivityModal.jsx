@@ -242,11 +242,28 @@ export const SocialCreateActivityModal = ({
             ? `Amanhã às ${time}` 
             : `Em breve às ${time}`;
 
+      // Calculate target expiration timestamp (+3h buffer after the event time)
+      let targetExpiration = new Date();
+      if (when === 'now') {
+        targetExpiration = new Date(Date.now() + 4 * 60 * 60 * 1000);
+      } else {
+        if (time && time.includes(':')) {
+          const [h, m] = time.split(':').map(Number);
+          targetExpiration.setHours(h || 0, m || 0, 0, 0);
+        }
+        if (when === 'tomorrow') {
+          targetExpiration.setDate(targetExpiration.getDate() + 1);
+        }
+        // Rolê expires 3 hours after scheduled time
+        targetExpiration = new Date(targetExpiration.getTime() + 3 * 60 * 60 * 1000);
+      }
+
       const payload = {
         title: title || 'Rolê Espontâneo no Radar',
         category: categoryLabel,
         location_name: locationRef ? `${location} (${locationRef})` : location,
         scheduled_time: whenText,
+        expires_at: targetExpiration.toISOString(),
         description: description,
         photo_url: photoUrl,
         latitude: activityCoords?.lat || undefined,

@@ -37,15 +37,24 @@ class Activity(db.Model):
     def to_dict(self):
         participants = ActivityParticipant.query.filter_by(activity_id=self.id).all()
         approved_count = sum(1 for p in participants if getattr(p, 'status', 'approved') == 'approved' and p.user_id != self.user_id)
+        
+        creator_photo = None
+        if self.creator:
+            creator_photo = self.creator.profile_photo_url
+            if not creator_photo:
+                c_photos = self.creator.get_photos()
+                if c_photos and len(c_photos) > 0:
+                    creator_photo = c_photos[0]
+
         return {
             'id': self.id,
             'user_id': self.user_id,
             'creator_name': self.creator.name if self.creator else 'Usuário Proximous',
-            'creator_photo': self.creator.profile_photo_url if self.creator else None,
+            'creator_photo': creator_photo,
             'category': self.category,
             'title': self.title,
             'description': self.description,
-            'photo_url': self.photo_url,
+            'photo_url': self.photo_url or creator_photo,
             'location_name': self.location_name or 'São Paulo, SP',
             'scheduled_time': self.scheduled_time or 'Hoje mais tarde',
             'latitude': self.latitude,
@@ -53,6 +62,7 @@ class Activity(db.Model):
             'max_participants': self.max_participants or 2,
             'participant_count': approved_count,
             'participants': [p.to_dict() for p in participants],
+            'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'expires_at': self.expires_at.isoformat() if self.expires_at else None,
             'is_active': self.is_active()
@@ -75,12 +85,20 @@ class ActivityParticipant(db.Model):
         super().__init__(**kwargs)
 
     def to_dict(self):
+        user_photo = None
+        if self.user:
+            user_photo = self.user.profile_photo_url
+            if not user_photo:
+                u_photos = self.user.get_photos()
+                if u_photos and len(u_photos) > 0:
+                    user_photo = u_photos[0]
+
         return {
             'id': self.id,
             'activity_id': self.activity_id,
             'user_id': self.user_id,
             'user_name': self.user.name if self.user else None,
-            'user_photo': self.user.profile_photo_url if self.user else None,
+            'user_photo': user_photo,
             'user_age': self.user.age if self.user else None,
             'status': getattr(self, 'status', 'pending') or 'pending',
             'joined_at': self.joined_at.isoformat() if self.joined_at else None
