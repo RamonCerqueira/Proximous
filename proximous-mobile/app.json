@@ -2,40 +2,67 @@
   "expo": {
     "name": "Proximous",
     "slug": "proximous-mobile",
+    "scheme": "proximous",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF8C00"
+      "backgroundColor": "#7C3AED"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.proximous.app"
+      "bundleIdentifier": "com.proximous.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "O Proximous utiliza sua localização aproximada para exibir pessoas e atividades disponíveis próximas a você.",
+        "NSCameraUsageDescription": "O Proximous precisa de acesso à câmera para que você possa tirar fotos para o seu perfil e compartilhar momentos.",
+        "NSPhotoLibraryUsageDescription": "O Proximous precisa de acesso à sua galeria de fotos para envio de imagens no perfil e publicações."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FF8C00"
+        "backgroundColor": "#7C3AED"
       },
-      "package": "com.proximous.app"
+      "package": "com.proximous.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": "https://your-backend-domain.ondigitalocean.app"
+      "apiUrl": "https://proximous.genioplay.com.br/api",
+      "eas": {
+        "projectId": "proximous-mobile-app"
+      }
     },
     "plugins": [
-      "expo-location",
-      "expo-image-picker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permita que o Proximous encontre conexões e atividades próximas a você."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita acesso às suas fotos para compartilhar momentos e atualizar seu perfil."
+        }
+      ],
       "expo-notifications"
     ]
   }
 }
-

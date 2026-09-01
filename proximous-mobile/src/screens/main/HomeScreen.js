@@ -1,256 +1,221 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { usersAPI, matchingAPI } from '../../config/api';
+import { momentsAPI, usersAPI, notificationsAPI } from '../../config/api';
 import { theme } from '../../styles/colors';
-import Button from '../../components/common/Button';
+import { generateAvatarUrl } from '../../utils/helpers';
+import MomentCard from '../../components/feed/MomentCard';
+import CreateMomentModal from '../../components/feed/CreateMomentModal';
+import EmptyState from '../../components/common/EmptyState';
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [recentMatches, setRecentMatches] = useState([]);
-  const [achievements, setAchievements] = useState([]);
+  const [moments, setMoments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [stats, setStats] = useState({ matches_count: 0, received_likes_count: 0 });
+
+  const fetchHomeData = useCallback(async () => {
+    try {
+      const [momentsRes, notifsRes, statsRes] = await Promise.allSettled([
+        momentsAPI.getMoments({ page: 1, per_page: 20 }),
+        notificationsAPI.getNotifications(),
+        usersAPI.getStats(),
+      ]);
+
+      if (momentsRes.status === 'fulfilled' && momentsRes.value.data?.moments) {
+        setMoments(momentsRes.value.data.moments);
+      }
+
+      if (notifsRes.status === 'fulfilled' && notifsRes.value.data) {
+        setUnreadNotifications(notifsRes.value.data.unread_count || 0);
+      }
+
+      if (statsRes.status === 'fulfilled' && statsRes.value.data?.stats) {
+        setStats(statsRes.value.data.stats);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar feed da Home:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchHomeData();
-  }, []);
+  }, [fetchHomeData]);
 
-  const fetchHomeData = async () => {
-    try {
-      setLoading(true);
-      
-      const [statsRes, matchesRes, achievementsRes] = await Promise.all([
-        usersAPI.getStats(),
-        matchingAPI.getMatches({ limit: 3 }),
-        usersAPI.getAchievements()
-      ]);
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchHomeData();
+  };
 
-      setStats(statsRes.data.stats);
-      setRecentMatches(matchesRes.data.matches || []);
-      setAchievements(achievementsRes.data.achievements?.filter(a => a.is_unlocked) || []);
-    } catch (error) {
-      console.error('Error fetching home data:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados. Tente novamente.');
-    } finally {
-      setLoading(false);
+  const handleMomentCreated = (newMoment) => {
+    if (newMoment) {
+      setMoments(prev => [newMoment, ...prev]);
+    } else {
+      fetchHomeData();
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchHomeData();
-    setRefreshing(false);
+  const handleMomentDeleted = (momentId) => {
+    setMoments(prev => prev.filter(m => m.id !== momentId));
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
-  };
+  const userAvatar = user?.avatar_url || generateAvatarUrl(user?.name || 'User');
 
-  const StatCard = ({ icon, title, value, color = theme.colors.primary, onPress }) => (
-    <TouchableOpacity style={styles.statCard} onPress={onPress}>
-      <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-      <Text style={styles.statValue}>{value || 0}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-    </TouchableOpacity>
-  );
-
-  const QuickActionCard = ({ icon, title, subtitle, onPress, gradient = false }) => (
-    <TouchableOpacity style={styles.quickActionCard} onPress={onPress}>
-      {gradient ? (
-        <LinearGradient
-          colors={theme.colors.gradientPrimary}
-          style={styles.quickActionGradient}
+  const renderHeader = () => (
+    <View style={styles.feedHeaderContainer}>
+      {/* Quick Discovery & Now Mode Highlights Banner */}
+      <View style={styles.quickBar}>
+        <TouchableOpacity
+          style={styles.nowCard}
+          onPress={() => navigation.navigate('Now')}
+          activeOpacity={0.85}
         >
-          <Ionicons name={icon} size={24} color={theme.colors.white} />
-        </LinearGradient>
-      ) : (
-        <View style={styles.quickActionIcon}>
-          <Ionicons name={icon} size={24} color={theme.colors.primary} />
-        </View>
-      )}
-      <View style={styles.quickActionContent}>
-        <Text style={styles.quickActionTitle}>{title}</Text>
-        <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
+          <LinearGradient
+            colors={theme.colors.gradientGold}
+            style={styles.nowGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.nowIconBadge}>
+              <Ionicons name="flash" size={18} color={theme.colors.gold} />
+            </View>
+            <View style={styles.nowMeta}>
+              <Text style={styles.nowTitle}>Modo AGORA</Text>
+              <Text style={styles.nowSubtitle}>Disponível para um café ou conversa?</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.white} />
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-    </TouchableOpacity>
-  );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text>Carregando...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+      {/* Section Title */}
+      <View style={styles.feedTitleRow}>
+        <Text style={styles.feedTitle}>Momentos Próximos</Text>
+        <TouchableOpacity
+          style={styles.newPostPill}
+          onPress={() => setShowCreateModal(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={16} color={theme.colors.primary} />
+          <Text style={styles.newPostPillText}>Compartilhar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>
-            {getGreeting()}, {user?.name?.split(' ')[0]}! 👋
-          </Text>
-          <Text style={styles.welcomeSubtitle}>
-            Vamos descobrir pessoas incríveis próximas a você
-          </Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Top Navbar */}
+      <View style={styles.topNav}>
+        <TouchableOpacity
+          style={styles.avatarButton}
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.8}
+        >
+          <Image source={{ uri: userAvatar }} style={styles.topAvatar} />
+        </TouchableOpacity>
+
+        <View style={styles.logoBrand}>
+          <Text style={styles.logoText}>Proximous</Text>
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Suas estatísticas</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              icon="heart"
-              title="Curtidas"
-              value={stats?.likes_sent}
-              color={theme.colors.error}
-              onPress={() => navigation.navigate('Matches')}
-            />
-            <StatCard
-              icon="people"
-              title="Matches"
-              value={stats?.total_matches}
-              color={theme.colors.success}
-              onPress={() => navigation.navigate('Matches')}
-            />
-            <StatCard
-              icon="chatbubbles"
-              title="Mensagens"
-              value={stats?.messages_sent}
-              color={theme.colors.info}
-              onPress={() => navigation.navigate('Messages')}
-            />
-            <StatCard
-              icon="trophy"
-              title="Conquistas"
-              value={achievements.length}
-              color={theme.colors.warning}
-            />
-          </View>
-        </View>
-
-        {/* Premium Banner */}
-        {!user?.is_premium && (
-          <TouchableOpacity style={styles.premiumBanner}>
-            <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primaryLight]}
-              style={styles.premiumGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.premiumContent}>
-                <Ionicons name="star" size={32} color={theme.colors.white} />
-                <View style={styles.premiumText}>
-                  <Text style={styles.premiumTitle}>Upgrade para Premium</Text>
-                  <Text style={styles.premiumSubtitle}>
-                    Curtidas ilimitadas, super likes e muito mais!
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color={theme.colors.white} />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>Ações rápidas</Text>
-          
-          <QuickActionCard
-            icon="search"
-            title="Descobrir pessoas"
-            subtitle="Encontre pessoas próximas a você"
-            onPress={() => navigation.navigate('Discover')}
-            gradient={true}
-          />
-          
-          <QuickActionCard
-            icon="heart"
-            title="Ver matches"
-            subtitle={`${stats?.total_matches || 0} matches disponíveis`}
-            onPress={() => navigation.navigate('Matches')}
-          />
-          
-          <QuickActionCard
-            icon="chatbubbles"
-            title="Mensagens"
-            subtitle="Continue suas conversas"
-            onPress={() => navigation.navigate('Messages')}
-          />
-          
-          <QuickActionCard
-            icon="person"
-            title="Editar perfil"
-            subtitle="Complete seu perfil para mais matches"
-            onPress={() => navigation.navigate('Profile')}
-          />
-        </View>
-
-        {/* Recent Achievements */}
-        {achievements.length > 0 && (
-          <View style={styles.achievementsSection}>
-            <Text style={styles.sectionTitle}>Conquistas recentes</Text>
-            {achievements.slice(0, 3).map((achievement) => (
-              <View key={achievement.id} style={styles.achievementCard}>
-                <View style={styles.achievementIcon}>
-                  <Ionicons name="trophy" size={20} color={theme.colors.warning} />
-                </View>
-                <View style={styles.achievementContent}>
-                  <Text style={styles.achievementTitle}>{achievement.name}</Text>
-                  <Text style={styles.achievementDescription}>
-                    {achievement.description}
-                  </Text>
-                  <Text style={styles.achievementPoints}>
-                    +{achievement.points} pontos
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Tips Section */}
-        <View style={styles.tipsSection}>
-          <View style={styles.tipCard}>
-            <Ionicons name="bulb" size={24} color={theme.colors.warning} />
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>Dica do dia</Text>
-              <Text style={styles.tipText}>
-                Complete seu perfil com fotos e uma bio interessante para receber mais curtidas!
+        <TouchableOpacity
+          style={styles.notifButton}
+          onPress={() => navigation.navigate('Notifications')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="notifications-outline" size={24} color={theme.colors.textPrimary} />
+          {unreadNotifications > 0 && (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
               </Text>
             </View>
-          </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Feed List */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Buscando publicações da sua região...</Text>
         </View>
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={moments}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <MomentCard
+              moment={item}
+              currentUserId={user?.id}
+              onIcebreakerSent={() => navigation.navigate('Messages')}
+              onDelete={handleMomentDeleted}
+            />
+          )}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={
+            <EmptyState
+              icon="sparkles-outline"
+              title="Seja o primeiro a publicar!"
+              description="Compartilhe uma foto, um pensamento ou convite com pessoas da sua cidade."
+              actionTitle="Criar Primeiro Momento"
+              onActionPress={() => setShowCreateModal(true)}
+            />
+          }
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+        />
+      )}
+
+      {/* Floating Action Button for Create Moment */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowCreateModal(true)}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={theme.colors.gradientSocial}
+          style={styles.fabGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name="add" size={28} color={theme.colors.white} />
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* Create Moment Modal */}
+      <CreateMomentModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onMomentCreated={handleMomentCreated}
+      />
     </SafeAreaView>
   );
 };
@@ -260,252 +225,154 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  scrollView: {
-    flex: 1,
-  },
-  
-  scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-  
-  welcomeSection: {
-    paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  
-  greeting: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  
-  welcomeSubtitle: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: theme.lineHeight.relaxed,
-  },
-  
-  sectionTitle: {
-    fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  
-  statsSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  
-  statsGrid: {
+  topNav: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  
-  statCard: {
-    width: '48%',
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    ...theme.shadow.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm + 2,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  avatarButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    overflow: 'hidden',
+  },
+  topAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  logoBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.primary,
+    letterSpacing: -0.5,
+  },
+  notifButton: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
+    position: 'relative',
   },
-  
-  statValue: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+  notifBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: theme.colors.danger,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
   },
-  
-  statTitle: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
+  notifBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: theme.colors.white,
   },
-  
-  premiumBanner: {
-    marginBottom: theme.spacing.xl,
+  listContent: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: 80,
+  },
+  feedHeaderContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  quickBar: {
+    marginBottom: theme.spacing.md,
+  },
+  nowCard: {
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
-    ...theme.shadow.md,
+    ...theme.shadow.sm,
   },
-  
-  premiumGradient: {
-    padding: theme.spacing.lg,
-  },
-  
-  premiumContent: {
+  nowGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: theme.spacing.md,
   },
-  
-  premiumText: {
+  nowIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  nowMeta: {
     flex: 1,
-    marginLeft: theme.spacing.md,
   },
-  
-  premiumTitle: {
-    fontSize: theme.fontSize.lg,
+  nowTitle: {
+    fontSize: theme.fontSize.sm + 1,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.white,
-    marginBottom: theme.spacing.xs,
   },
-  
-  premiumSubtitle: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.white,
-    opacity: 0.9,
+  nowSubtitle: {
+    fontSize: theme.fontSize.xs,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 1,
   },
-  
-  quickActionsSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  
-  quickActionCard: {
+  feedTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadow.sm,
-  },
-  
-  quickActionGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${theme.colors.primary}20`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  
-  quickActionContent: {
-    flex: 1,
-  },
-  
-  quickActionTitle: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textPrimary,
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.xs,
     marginBottom: theme.spacing.xs,
   },
-  
-  quickActionSubtitle: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
+  feedTitle: {
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
   },
-  
-  achievementsSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  
-  achievementCard: {
+  newPostPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadow.sm,
+    backgroundColor: theme.colors.primarySoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
   },
-  
-  achievementIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${theme.colors.warning}20`,
+  newPostPillText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+    marginLeft: 2,
+  },
+  loadingContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.md,
+    padding: theme.spacing.xl,
   },
-  
-  achievementContent: {
-    flex: 1,
-  },
-  
-  achievementTitle: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  achievementDescription: {
+  loadingText: {
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+    marginTop: theme.spacing.md,
   },
-  
-  achievementPoints: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.warning,
-    fontWeight: theme.fontWeight.medium,
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    borderRadius: 28,
+    ...theme.shadow.lg,
   },
-  
-  tipsSection: {
-    marginBottom: theme.spacing.lg,
-  },
-  
-  tipCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    ...theme.shadow.sm,
-  },
-  
-  tipContent: {
-    flex: 1,
-    marginLeft: theme.spacing.md,
-  },
-  
-  tipTitle: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  tipText: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    lineHeight: theme.lineHeight.relaxed,
+  fabGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
 export default HomeScreen;
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,162 +8,92 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  Image
+  Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../config/api';
-import { colors } from '../../styles/colors';
-import { formatTime } from '../../utils/helpers';
+import { messagesAPI } from '../../config/api';
+import { formatDateTime, generateAvatarUrl } from '../../utils/helpers';
+import { theme } from '../../styles/colors';
 
 const ChatScreen = ({ route, navigation }) => {
-  const { conversationId, userName, userAvatar } = route.params;
+  const { conversationId, userName, userAvatar } = route.params || {};
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef(null);
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await messagesAPI.getMessages(conversationId);
+      setMessages(res.data.messages || []);
+    } catch (error) {
+      console.error('Erro ao buscar mensagens do chat:', error);
+    }
+  }, [conversationId]);
+
   useEffect(() => {
     fetchMessages();
-    // Configurar header da navegação
-    navigation.setOptions({
-      headerTitle: userName,
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.headerButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <View style={styles.headerRight}>
-          <Image source={{ uri: userAvatar }} style={styles.headerAvatar} />
-        </View>
-      ),
-    });
-  }, [conversationId, userName, userAvatar]);
+    const interval = setInterval(fetchMessages, 5000); // Polling fallback for real-time
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
 
-  const fetchMessages = async () => {
-    try {
-      const response = await api.get(`/messages/conversation/${conversationId}`);
-      setMessages(response.data.messages || []);
-    } catch (error) {
-      console.error('Erro ao buscar mensagens:', error);
-      // Mock data para demonstração
-      setMessages([
-        {
-          id: 1,
-          content: 'Oi! Como você está?',
-          sender_id: conversationId,
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          is_read: true
-        },
-        {
-          id: 2,
-          content: 'Oi! Estou bem, obrigado! E você?',
-          sender_id: user.id,
-          created_at: new Date(Date.now() - 3000000).toISOString(),
-          is_read: true
-        },
-        {
-          id: 3,
-          content: 'Também estou bem! Que bom que deu match 😊',
-          sender_id: conversationId,
-          created_at: new Date(Date.now() - 2400000).toISOString(),
-          is_read: true
-        },
-        {
-          id: 4,
-          content: 'Sim! Adorei seu perfil. Você gosta de que tipo de música?',
-          sender_id: user.id,
-          created_at: new Date(Date.now() - 1800000).toISOString(),
-          is_read: true
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSend = async () => {
+    if (!inputText.trim() || sending) return;
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || sending) return;
-
+    const content = inputText.trim();
+    setInputText('');
     setSending(true);
-    const messageText = newMessage.trim();
-    setNewMessage('');
 
-    // Adicionar mensagem temporariamente na lista
-    const tempMessage = {
-      id: Date.now(),
-      content: messageText,
-      sender_id: user.id,
+    // Optimistic UI append
+    const tempId = String(Date.now());
+    const optimisticMsg = {
+      id: tempId,
+      sender_id: user?.id,
+      receiver_id: conversationId,
+      content,
       created_at: new Date().toISOString(),
       is_read: false,
-      sending: true
     };
 
-    setMessages(prev => [...prev, tempMessage]);
+    setMessages(prev => [optimisticMsg, ...prev]);
 
     try {
-      const response = await api.post('/messages/send', {
+      await messagesAPI.sendMessage({
         receiver_id: conversationId,
-        content: messageText
+        content,
       });
-
-      // Atualizar mensagem com dados do servidor
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempMessage.id 
-            ? { ...response.data.message, sending: false }
-            : msg
-        )
-      );
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      Alert.alert('Erro', 'Não foi possível enviar a mensagem');
-      
-      // Remover mensagem temporária em caso de erro
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      fetchMessages();
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err);
     } finally {
       setSending(false);
     }
   };
 
-  const renderMessage = ({ item }) => {
-    const isMyMessage = item.sender_id === user.id;
-    
+  const avatar = userAvatar || generateAvatarUrl(userName || 'User');
+
+  const renderBubble = ({ item }) => {
+    const isMine = item.sender_id === user?.id;
+
     return (
-      <View style={[
-        styles.messageContainer,
-        isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble
-        ]}>
-          <Text style={[
-            styles.messageText,
-            isMyMessage ? styles.myMessageText : styles.otherMessageText
-          ]}>
+      <View style={[styles.bubbleWrapper, isMine ? styles.myWrapper : styles.theirWrapper]}>
+        <View style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}>
+          <Text style={[styles.bubbleText, isMine ? styles.myBubbleText : styles.theirBubbleText]}>
             {item.content}
           </Text>
-          <View style={styles.messageFooter}>
-            <Text style={[
-              styles.messageTime,
-              isMyMessage ? styles.myMessageTime : styles.otherMessageTime
-            ]}>
-              {formatTime(item.created_at)}
+          <View style={styles.bubbleFooter}>
+            <Text style={[styles.timeText, isMine ? styles.myTimeText : styles.theirTimeText]}>
+              {formatDateTime(item.created_at)}
             </Text>
-            {isMyMessage && (
+            {isMine && (
               <Ionicons
-                name={item.sending ? "time-outline" : item.is_read ? "checkmark-done" : "checkmark"}
+                name={item.is_read ? 'checkmark-done' : 'checkmark'}
                 size={14}
-                color={item.sending ? colors.gray : item.is_read ? colors.primary : colors.lightGray}
-                style={styles.messageStatus}
+                color={item.is_read ? theme.colors.goldLight : 'rgba(255, 255, 255, 0.7)'}
+                style={{ marginLeft: 4 }}
               />
             )}
           </View>
@@ -172,187 +102,215 @@ const ChatScreen = ({ route, navigation }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Carregando mensagens...</Text>
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderMessage}
-        style={styles.messagesList}
-        contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.textInput}
-          value={newMessage}
-          onChangeText={setNewMessage}
-          placeholder="Digite sua mensagem..."
-          placeholderTextColor={colors.lightGray}
-          multiline
-          maxLength={500}
-        />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!newMessage.trim() || sending) && styles.sendButtonDisabled
-          ]}
-          onPress={sendMessage}
-          disabled={!newMessage.trim() || sending}
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons
-            name={sending ? "hourglass-outline" : "send"}
-            size={20}
-            color={(!newMessage.trim() || sending) ? colors.lightGray : colors.white}
-          />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+
+        <View style={styles.headerUser}>
+          <Image source={{ uri: avatar }} style={styles.headerAvatar} />
+          <View style={styles.headerMeta}>
+            <Text style={styles.headerName} numberOfLines={1}>{userName || 'Conversa'}</Text>
+            <Text style={styles.headerStatus}>Online recentemente</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.headerAction}>
+          <Ionicons name="ellipsis-vertical" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+
+      {/* Messages Feed */}
+      <KeyboardAvoidingView
+        style={styles.flexOne}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderBubble}
+          inverted
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* Input Bar */}
+        <View style={styles.inputBar}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Digite uma mensagem..."
+            placeholderTextColor={theme.colors.textMuted}
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+
+          <TouchableOpacity
+            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || sending}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="send" size={18} color={theme.colors.white} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
   },
-  loadingContainer: {
+  flexOne: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  loadingText: {
-    fontSize: 16,
-    color: colors.gray,
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  headerRight: {
-    marginRight: 16,
+  headerUser: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: theme.spacing.xs,
   },
   headerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
-  messagesList: {
+  headerMeta: {
+    marginLeft: theme.spacing.sm,
     flex: 1,
   },
-  messagesContent: {
-    padding: 16,
-    paddingBottom: 8,
+  headerName: {
+    fontSize: theme.fontSize.sm + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
   },
-  messageContainer: {
+  headerStatus: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.success,
+  },
+  headerAction: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messagesList: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  bubbleWrapper: {
     marginVertical: 4,
+    flexDirection: 'row',
   },
-  myMessageContainer: {
-    alignItems: 'flex-end',
+  myWrapper: {
+    justifyContent: 'flex-end',
   },
-  otherMessageContainer: {
-    alignItems: 'flex-start',
+  theirWrapper: {
+    justifyContent: 'flex-start',
   },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+  bubble: {
+    maxWidth: '78%',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
   },
-  myMessageBubble: {
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
+  myBubble: {
+    backgroundColor: theme.colors.primary,
+    borderBottomRightRadius: 2,
   },
-  otherMessageBubble: {
-    backgroundColor: colors.white,
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  theirBubble: {
+    backgroundColor: theme.colors.surface,
+    borderBottomLeftRadius: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  messageText: {
-    fontSize: 16,
+  bubbleText: {
+    fontSize: theme.fontSize.sm,
     lineHeight: 20,
   },
-  myMessageText: {
-    color: colors.white,
+  myBubbleText: {
+    color: theme.colors.white,
   },
-  otherMessageText: {
-    color: colors.text,
+  theirBubbleText: {
+    color: theme.colors.textPrimary,
   },
-  messageFooter: {
+  bubbleFooter: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: 4,
   },
-  messageTime: {
-    fontSize: 12,
+  timeText: {
+    fontSize: 10,
   },
-  myMessageTime: {
-    color: colors.white,
-    opacity: 0.8,
+  myTimeText: {
+    color: 'rgba(255, 255, 255, 0.75)',
   },
-  otherMessageTime: {
-    color: colors.gray,
+  theirTimeText: {
+    color: theme.colors.textMuted,
   },
-  messageStatus: {
-    marginLeft: 4,
-  },
-  inputContainer: {
+  inputBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.lightGray,
+    borderTopColor: theme.colors.border,
   },
   textInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.lightGray,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textPrimary,
     maxHeight: 100,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  sendButton: {
-    backgroundColor: colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+  sendBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'center',
+    marginLeft: theme.spacing.sm,
   },
-  sendButtonDisabled: {
-    backgroundColor: colors.lightGray,
+  sendBtnDisabled: {
+    opacity: 0.5,
   },
 });
 
 export default ChatScreen;
-

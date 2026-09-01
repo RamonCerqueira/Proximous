@@ -7,26 +7,27 @@ import { theme } from '../styles/colors';
 const LoadingScreen = () => {
   return (
     <LinearGradient
-      colors={[theme.colors.background, theme.colors.accent]}
+      colors={[theme.colors.background, theme.colors.primarySoft]}
       style={styles.container}
     >
       <View style={styles.content}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <LinearGradient
-            colors={theme.colors.gradientPrimary}
-            style={styles.logoGradient}
-          >
-            <Ionicons name="heart" size={32} color={theme.colors.white} />
-          </LinearGradient>
-        </View>
+        {/* Brand Logo */}
+        <LinearGradient
+          colors={theme.colors.gradientSocial}
+          style={styles.logoGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name="sparkles" size={38} color={theme.colors.white} />
+        </LinearGradient>
         
         <Text style={styles.logoText}>Proximous</Text>
+        <Text style={styles.tagline}>Conectando o seu mundo real</Text>
         
         {/* Loading Indicator */}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Carregando...</Text>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Iniciando ambiente seguro...</Text>
         </View>
       </View>
     </LinearGradient>
@@ -39,41 +40,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   content: {
     alignItems: 'center',
   },
-  
-  logoContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  
   logoGradient: {
     width: 80,
     height: 80,
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: theme.spacing.md,
     ...theme.shadow.lg,
   },
-  
   logoText: {
-    fontSize: theme.fontSize.xxxl,
+    fontSize: theme.fontSize.display,
     fontWeight: theme.fontWeight.bold,
-    color: theme.colors.primary,
+    color: theme.colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xxl,
   },
-  
   loadingContainer: {
     alignItems: 'center',
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    ...theme.shadow.sm,
   },
-  
   loadingText: {
-    fontSize: theme.fontSize.md,
+    fontSize: theme.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
+    marginLeft: theme.spacing.sm,
+    fontWeight: theme.fontWeight.medium,
   },
 });
 
 export default LoadingScreen;
-

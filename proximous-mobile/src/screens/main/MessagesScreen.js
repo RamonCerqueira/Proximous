@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,327 +7,287 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  RefreshControl
+  RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../config/api';
-import { colors } from '../../styles/colors';
-import { formatTime } from '../../utils/helpers';
+import { messagesAPI } from '../../config/api';
+import { formatDateTime, generateAvatarUrl } from '../../utils/helpers';
+import { theme } from '../../styles/colors';
+import EmptyState from '../../components/common/EmptyState';
 
 const MessagesScreen = ({ navigation }) => {
-  const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
-      const response = await api.get('/messages/conversations');
+      const response = await messagesAPI.getConversations();
       setConversations(response.data.conversations || []);
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
-      // Mock data para demonstração
-      setConversations([
-        {
-          id: 1,
-          user_name: 'Ana Silva',
-          user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-          last_message: 'Oi! Como você está?',
-          last_message_time: new Date(Date.now() - 3600000).toISOString(),
-          unread_count: 2,
-          is_online: true
-        },
-        {
-          id: 2,
-          user_name: 'Carlos Santos',
-          user_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-          last_message: 'Que tal um café hoje?',
-          last_message_time: new Date(Date.now() - 7200000).toISOString(),
-          unread_count: 0,
-          is_online: false
-        },
-        {
-          id: 3,
-          user_name: 'Mariana Costa',
-          user_avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-          last_message: 'Adorei nosso papo! 😊',
-          last_message_time: new Date(Date.now() - 86400000).toISOString(),
-          unread_count: 1,
-          is_online: true
-        }
-      ]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const onRefresh = async () => {
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchConversations();
-    setRefreshing(false);
+    fetchConversations();
   };
 
-  const openChat = (conversation) => {
+  const openChat = (item) => {
     navigation.navigate('Chat', {
-      conversationId: conversation.id,
-      userName: conversation.user_name,
-      userAvatar: conversation.user_avatar
+      conversationId: item.id || item.user_id,
+      userName: item.user_name || item.name,
+      userAvatar: item.user_avatar || item.avatar_url || generateAvatarUrl(item.user_name || item.name || 'User'),
     });
   };
 
-  const filteredConversations = conversations.filter(conversation =>
-    conversation.user_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter(c => {
+    const name = c.user_name || c.name || '';
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
-  const renderConversation = ({ item }) => (
-    <TouchableOpacity
-      style={styles.conversationItem}
-      onPress={() => openChat(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.user_avatar }} style={styles.avatar} />
-        {item.is_online && <View style={styles.onlineIndicator} />}
-      </View>
-      
-      <View style={styles.conversationContent}>
-        <View style={styles.conversationHeader}>
-          <Text style={styles.userName}>{item.user_name}</Text>
-          <Text style={styles.messageTime}>
-            {formatTime(item.last_message_time)}
-          </Text>
-        </View>
-        
-        <View style={styles.messagePreview}>
-          <Text
-            style={[
-              styles.lastMessage,
-              item.unread_count > 0 && styles.unreadMessage
-            ]}
-            numberOfLines={1}
-          >
-            {item.last_message}
-          </Text>
-          {item.unread_count > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {item.unread_count > 99 ? '99+' : item.unread_count}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderConversationItem = ({ item }) => {
+    const name = item.user_name || item.name || 'Usuário';
+    const avatar = item.user_avatar || item.avatar_url || generateAvatarUrl(name);
+    const lastMsg = item.last_message || 'Nova conversa iniciada';
+    const unread = item.unread_count || 0;
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubbles-outline" size={64} color={colors.lightGray} />
-      <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
-      <Text style={styles.emptySubtitle}>
-        Quando você der match com alguém, as conversas aparecerão aqui
-      </Text>
-    </View>
-  );
-
-  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Carregando conversas...</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.convItem}
+        onPress={() => openChat(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: avatar }} style={styles.avatar} />
+          {item.is_online && <View style={styles.onlineDot} />}
+        </View>
+
+        <View style={styles.convContent}>
+          <View style={styles.convHeader}>
+            <Text style={styles.convName} numberOfLines={1}>{name}</Text>
+            {item.last_message_time && (
+              <Text style={styles.convTime}>{formatDateTime(item.last_message_time)}</Text>
+            )}
+          </View>
+
+          <View style={styles.convFooter}>
+            <Text
+              style={[styles.convLastMsg, unread > 0 && styles.convLastMsgUnread]}
+              numberOfLines={1}
+            >
+              {lastMsg}
+            </Text>
+
+            {unread > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{unread}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Header com busca */}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mensagens</Text>
+        <TouchableOpacity
+          style={styles.newChatBtn}
+          onPress={() => navigation.navigate('Discover')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="people-outline" size={22} color={theme.colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={colors.gray} style={styles.searchIcon} />
+          <Ionicons name="search-outline" size={18} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar conversas..."
-            placeholderTextColor={colors.lightGray}
+            placeholderTextColor={theme.colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
-      {/* Lista de conversas */}
+      {/* Conversations List */}
       <FlatList
         data={filteredConversations}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderConversation}
-        ListEmptyComponent={renderEmptyState}
+        keyExtractor={(item) => String(item.id || item.user_id)}
+        renderItem={renderConversationItem}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="Nenhuma mensagem ainda"
+            description="Dê um like ou envie um Icebreaker em publicações para iniciar conversas."
+            actionTitle="Ver Publicações"
+            onActionPress={() => navigation.navigate('Home')}
           />
         }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          filteredConversations.length === 0 ? styles.emptyList : undefined
-        }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.gray,
+    backgroundColor: theme.colors.background,
   },
   header: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm + 2,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 16,
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  newChatBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchSection: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    height: 42,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textPrimary,
   },
-  conversationItem: {
+  listContent: {
+    paddingVertical: theme.spacing.xs,
+    paddingBottom: 40,
+  },
+  convItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.white,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    borderBottomColor: theme.colors.borderLight,
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 16,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.primarySoft,
   },
-  onlineIndicator: {
+  onlineDot: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.success,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.success,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: theme.colors.white,
   },
-  conversationContent: {
+  convContent: {
     flex: 1,
+    marginLeft: theme.spacing.md,
   },
-  conversationHeader: {
+  convHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 4,
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  messageTime: {
-    fontSize: 12,
-    color: colors.gray,
-  },
-  messagePreview: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  lastMessage: {
+  convName: {
+    fontSize: theme.fontSize.sm + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
     flex: 1,
-    fontSize: 14,
-    color: colors.gray,
     marginRight: 8,
   },
-  unreadMessage: {
-    color: colors.text,
-    fontWeight: '500',
+  convTime: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textMuted,
+  },
+  convFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  convLastMsg: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    flex: 1,
+    marginRight: 8,
+  },
+  convLastMsgUnread: {
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fontWeight.bold,
   },
   unreadBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  unreadCount: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 4,
   },
-  emptyList: {
-    flex: 1,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: colors.gray,
-    textAlign: 'center',
-    lineHeight: 24,
+  unreadText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: theme.colors.white,
   },
 });
 
 export default MessagesScreen;
-

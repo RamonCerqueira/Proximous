@@ -8,26 +8,27 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { validateEmail } from '../../utils/helpers';
+import { validateEmail, validatePassword } from '../../utils/helpers';
 import { theme } from '../../styles/colors';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
-const LoginScreen = ({ navigation }) => {
+const RegisterScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
+    name: '',
+    username: '',
     email: '',
     password: '',
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { register } = useAuth();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -39,31 +40,52 @@ const LoginScreen = ({ navigation }) => {
   const validateForm = () => {
     const newErrors = {};
 
+    if (!formData.name.trim()) {
+      newErrors.name = 'Nome completo é obrigatório';
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Nome de usuário (@username) é obrigatório';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'O nome de usuário deve ter pelo menos 3 caracteres';
+    }
+
     if (!formData.email) {
       newErrors.email = 'E-mail é obrigatório';
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Insira um e-mail válido';
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Senha é obrigatória';
+    const passValidation = validatePassword(formData.password);
+    if (!passValidation.isValid) {
+      newErrors.password = passValidation.errors[0];
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'As senhas não coincidem';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const result = await login(formData);
+      const result = await register({
+        name: formData.name.trim(),
+        username: formData.username.trim().toLowerCase(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
+
       if (!result.success) {
-        Alert.alert('Acesso não autorizado', result.error || 'Credenciais inválidas. Verifique e tente novamente.');
+        Alert.alert('Erro no cadastro', result.error || 'Não foi possível concluir seu cadastro. Tente outro e-mail ou nome de usuário.');
       }
     } catch (error) {
-      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
+      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -80,27 +102,43 @@ const LoginScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Brand Header */}
+          {/* Top Bar */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+
           <View style={styles.header}>
-            <LinearGradient
-              colors={theme.colors.gradientSocial}
-              style={styles.logoBadge}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="sparkles" size={32} color={theme.colors.white} />
-            </LinearGradient>
-            
-            <Text style={styles.brandTitle}>Proximous</Text>
-            <Text style={styles.brandSubtitle}>
-              Conecte-se com pessoas autênticas próximas a você
+            <Text style={styles.title}>Crie sua conta</Text>
+            <Text style={styles.subtitle}>
+              Junte-se ao Proximous e encontre sua comunidade
             </Text>
           </View>
 
-          {/* Form Card */}
+          {/* Form */}
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Bem-vindo(a) de volta</Text>
-            
+            <Input
+              label="Nome Completo"
+              placeholder="Ex: Clara Mendes"
+              value={formData.name}
+              onChangeText={(text) => handleInputChange('name', text)}
+              error={errors.name}
+              leftIcon={<Ionicons name="person-outline" size={20} color={theme.colors.textSecondary} />}
+            />
+
+            <Input
+              label="Nome de Usuário"
+              placeholder="@claramendes"
+              value={formData.username}
+              onChangeText={(text) => handleInputChange('username', text)}
+              error={errors.username}
+              autoCapitalize="none"
+              leftIcon={<Ionicons name="at-outline" size={20} color={theme.colors.textSecondary} />}
+            />
+
             <Input
               label="E-mail"
               placeholder="seu@email.com"
@@ -109,13 +147,12 @@ const LoginScreen = ({ navigation }) => {
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
               leftIcon={<Ionicons name="mail-outline" size={20} color={theme.colors.textSecondary} />}
             />
 
             <Input
               label="Senha"
-              placeholder="Sua senha secreta"
+              placeholder="Mínimo de 8 caracteres"
               value={formData.password}
               onChangeText={(text) => handleInputChange('password', text)}
               error={errors.password}
@@ -123,31 +160,30 @@ const LoginScreen = ({ navigation }) => {
               leftIcon={<Ionicons name="lock-closed-outline" size={20} color={theme.colors.textSecondary} />}
             />
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={styles.forgotPasswordButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.forgotPasswordText}>Esqueceu sua senha?</Text>
-            </TouchableOpacity>
+            <Input
+              label="Confirmar Senha"
+              placeholder="Repita sua senha"
+              value={formData.confirmPassword}
+              onChangeText={(text) => handleInputChange('confirmPassword', text)}
+              error={errors.confirmPassword}
+              secureTextEntry
+              leftIcon={<Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textSecondary} />}
+            />
 
             <Button
-              title="Entrar na Minha Conta"
-              onPress={handleLogin}
+              title="Criar Conta Gratuita"
+              onPress={handleRegister}
               loading={loading}
               size="lg"
               style={styles.submitButton}
             />
           </View>
 
-          {/* Footer Register Link */}
+          {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Ainda não faz parte do Proximous? </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Register')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.registerLink}>Cadastre-se</Text>
+            <Text style={styles.footerText}>Já tem uma conta? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginLink}>Entrar</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -167,63 +203,43 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
-    justifyContent: 'space-between',
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: theme.borderRadius.xl,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     marginBottom: theme.spacing.md,
-    ...theme.shadow.lg,
   },
-  brandTitle: {
-    fontSize: theme.fontSize.display,
+  header: {
+    marginBottom: theme.spacing.lg,
+  },
+  title: {
+    fontSize: theme.fontSize.xxl,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
-    letterSpacing: -0.5,
   },
-  brandSubtitle: {
+  subtitle: {
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: theme.spacing.xs,
-    maxWidth: 280,
-    lineHeight: 20,
+    marginTop: 4,
   },
   formCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.xl,
-    padding: theme.spacing.xl,
+    padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     ...theme.shadow.md,
   },
-  formTitle: {
-    fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg,
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.lg,
-    marginTop: -theme.spacing.xs,
-  },
-  forgotPasswordText: {
-    fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
-    color: theme.colors.primary,
-  },
   submitButton: {
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.md,
   },
   footer: {
     flexDirection: 'row',
@@ -235,11 +251,11 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
   },
-  registerLink: {
+  loginLink: {
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.primary,
   },
 });
 
-export default LoginScreen;
+export default RegisterScreen;

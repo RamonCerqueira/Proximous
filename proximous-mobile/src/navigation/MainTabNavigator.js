@@ -2,50 +2,53 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/colors';
+import { Platform } from 'react-native';
+import { theme } from '../styles/colors';
 
 // Screens
 import HomeScreen from '../screens/main/HomeScreen';
 import DiscoverScreen from '../screens/main/DiscoverScreen';
 import NowScreen from '../screens/main/NowScreen';
-import MatchesScreen from '../screens/main/MatchesScreen';
 import MessagesScreen from '../screens/main/MessagesScreen';
 import ChatScreen from '../screens/main/ChatScreen';
+import MatchesScreen from '../screens/main/MatchesScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Stack Navigator para Mensagens (inclui Chat)
-const MessagesStack = () => {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen 
-        name="MessagesList" 
-        component={MessagesScreen} 
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen 
-        name="Chat" 
-        component={ChatScreen}
-        options={{
-          headerStyle: {
-            backgroundColor: colors.white,
-          },
-          headerTintColor: colors.primary,
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      />
-    </Stack.Navigator>
-  );
-};
+// Stack para Home
+const HomeStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="HomeScreen" component={HomeScreen} />
+    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen name="Matches" component={MatchesScreen} />
+  </Stack.Navigator>
+);
+
+// Stack para Mensagens & Chat
+const MessagesStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="MessagesList" component={MessagesScreen} />
+    <Stack.Screen name="Chat" component={ChatScreen} />
+  </Stack.Navigator>
+);
+
+// Stack para Perfil
+const ProfileStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+    <Stack.Screen name="Matches" component={MatchesScreen} />
+    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+  </Stack.Navigator>
+);
 
 const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -55,96 +58,59 @@ const MainTabNavigator = () => {
             iconName = focused ? 'compass' : 'compass-outline';
           } else if (route.name === 'Now') {
             iconName = focused ? 'flash' : 'flash-outline';
-          } else if (route.name === 'Matches') {
-            iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'Messages') {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={22} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.gray,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.white,
+          backgroundColor: theme.colors.surface,
           borderTopWidth: 1,
-          borderTopColor: colors.lightGray,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          borderTopColor: theme.colors.border,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          paddingTop: 8,
+          ...theme.shadow.md,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: theme.fontSize.caption,
+          fontWeight: '600',
+          marginTop: 2,
         },
-        headerStyle: {
-          backgroundColor: colors.white,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.lightGray,
-        },
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 20,
-          color: colors.text,
-        },
-        headerTintColor: colors.primary,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{
-          title: 'Início',
-          headerTitle: 'Proximous',
-        }}
+      <Tab.Screen
+        name="Home"
+        component={HomeStack}
+        options={{ tabBarLabel: 'Início' }}
       />
-      <Tab.Screen 
-        name="Discover" 
+      <Tab.Screen
+        name="Discover"
         component={DiscoverScreen}
-        options={{
-          title: 'Descobrir',
-          headerTitle: 'Descobrir',
-        }}
+        options={{ tabBarLabel: 'Descobrir' }}
       />
-      <Tab.Screen 
-        name="Now" 
+      <Tab.Screen
+        name="Now"
         component={NowScreen}
-        options={{
-          title: 'Modo AGORA',
-          headerTitle: '⚡ Modo AGORA',
-        }}
+        options={{ tabBarLabel: 'Modo AGORA' }}
       />
-      <Tab.Screen 
-        name="Matches" 
-        component={MatchesScreen}
-        options={{
-          title: 'Matches',
-          headerTitle: 'Seus Matches',
-        }}
-      />
-      <Tab.Screen 
-        name="Messages" 
+      <Tab.Screen
+        name="Messages"
         component={MessagesStack}
-        options={{
-          title: 'Mensagens',
-          headerShown: false,
-        }}
+        options={{ tabBarLabel: 'Mensagens' }}
       />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{
-          title: 'Perfil',
-          headerTitle: 'Meu Perfil',
-        }}
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStack}
+        options={{ tabBarLabel: 'Perfil' }}
       />
     </Tab.Navigator>
   );
 };
 
 export default MainTabNavigator;
-

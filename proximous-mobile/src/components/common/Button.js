@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../styles/colors';
 
@@ -18,10 +18,10 @@ const Button = ({
   const getButtonStyle = () => {
     const baseStyle = [styles.button, styles[`button_${size}`]];
     
-    if (variant === 'primary') {
-      return [...baseStyle, styles.buttonPrimary];
-    } else if (variant === 'secondary') {
+    if (variant === 'secondary') {
       return [...baseStyle, styles.buttonSecondary];
+    } else if (variant === 'gold') {
+      return [...baseStyle, styles.buttonGold];
     } else if (variant === 'outline') {
       return [...baseStyle, styles.buttonOutline];
     } else if (variant === 'ghost') {
@@ -34,47 +34,50 @@ const Button = ({
   const getTextStyle = () => {
     const baseStyle = [styles.text, styles[`text_${size}`]];
     
-    if (variant === 'primary') {
-      return [...baseStyle, styles.textPrimary];
+    if (variant === 'primary' || variant === 'gold') {
+      return [...baseStyle, styles.textWhite];
     } else if (variant === 'secondary') {
       return [...baseStyle, styles.textSecondary];
-    } else if (variant === 'outline') {
-      return [...baseStyle, styles.textOutline];
-    } else if (variant === 'ghost') {
-      return [...baseStyle, styles.textGhost];
+    } else if (variant === 'outline' || variant === 'ghost') {
+      return [...baseStyle, styles.textPrimary];
     }
     
     return baseStyle;
   };
 
   const renderContent = () => (
-    <>
+    <View style={styles.contentRow}>
       {loading ? (
         <ActivityIndicator 
-          color={variant === 'primary' ? theme.colors.white : theme.colors.primary} 
+          color={variant === 'primary' || variant === 'gold' ? theme.colors.white : theme.colors.primary} 
           size="small" 
         />
       ) : (
         <>
-          {icon && icon}
+          {icon && <View style={styles.iconContainer}>{icon}</View>}
           <Text style={[getTextStyle(), textStyle]}>
             {title}
           </Text>
         </>
       )}
-    </>
+    </View>
   );
 
-  if (variant === 'primary' && !disabled) {
+  if ((variant === 'primary' || variant === 'gold') && !disabled) {
+    const gradientColors = variant === 'gold' 
+      ? theme.colors.gradientGold 
+      : theme.colors.gradientPrimary;
+
     return (
       <TouchableOpacity
         onPress={onPress}
         disabled={disabled || loading}
-        style={[style]}
+        activeOpacity={0.85}
+        style={[styles.wrapper, style]}
         {...props}
       >
         <LinearGradient
-          colors={theme.colors.gradientPrimary}
+          colors={gradientColors}
           style={[getButtonStyle(), disabled && styles.buttonDisabled]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
@@ -89,6 +92,7 @@ const Button = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
+      activeOpacity={0.7}
       style={[getButtonStyle(), disabled && styles.buttonDisabled, style]}
       {...props}
     >
@@ -98,6 +102,10 @@ const Button = ({
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    borderRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -105,34 +113,42 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     ...theme.shadow.sm,
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: theme.spacing.sm,
+  },
   
   // Sizes
   button_sm: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    minHeight: 36,
+    paddingVertical: theme.spacing.xs + 2,
+    minHeight: 38,
   },
   button_md: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    minHeight: 48,
+    paddingVertical: theme.spacing.sm + 4,
+    minHeight: 50,
   },
   button_lg: {
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     minHeight: 56,
   },
   
   // Variants
-  buttonPrimary: {
-    backgroundColor: theme.colors.primary,
-  },
   buttonSecondary: {
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.primarySoft,
+  },
+  buttonGold: {
+    backgroundColor: theme.colors.gold,
   },
   buttonOutline: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.primary,
   },
   buttonGhost: {
@@ -157,20 +173,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.lg,
   },
   
-  // Text variants
-  textPrimary: {
+  // Text colors
+  textWhite: {
     color: theme.colors.white,
+  },
+  textPrimary: {
+    color: theme.colors.primary,
   },
   textSecondary: {
-    color: theme.colors.white,
-  },
-  textOutline: {
-    color: theme.colors.primary,
-  },
-  textGhost: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryDark,
   },
 });
 
 export default Button;
-

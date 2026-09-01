@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,67 +7,77 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  Switch,
   Modal,
-  TextInput
+  TextInput,
+  RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../config/api';
-import { colors } from '../../styles/colors';
+import { usersAPI } from '../../config/api';
+import { theme } from '../../styles/colors';
+import { generateAvatarUrl } from '../../utils/helpers';
+import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingField, setEditingField] = useState('');
-  const [editValue, setEditValue] = useState('');
-  const [settings, setSettings] = useState({
-    notifications: true,
-    showAge: true,
-    showDistance: true,
-    invisibleMode: false
-  });
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  // Edit Bio Modal
+  const [showBioModal, setShowBioModal] = useState(false);
+  const [newBio, setNewBio] = useState('');
+  const [savingBio, setSavingBio] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfileData = useCallback(async () => {
     try {
-      const response = await api.get('/users/profile');
-      setProfile(response.data.user || {});
+      const [profRes, statsRes, achRes] = await Promise.allSettled([
+        usersAPI.getProfile(),
+        usersAPI.getStats(),
+        usersAPI.getAchievements(),
+      ]);
+
+      if (profRes.status === 'fulfilled' && profRes.value.data?.user) {
+        setProfile(profRes.value.data.user);
+        setNewBio(profRes.value.data.user.bio || '');
+      } else {
+        setProfile(user);
+        setNewBio(user?.bio || '');
+      }
+
+      if (statsRes.status === 'fulfilled' && statsRes.value.data?.stats) {
+        setStats(statsRes.value.data.stats);
+      }
+
+      if (achRes.status === 'fulfilled' && achRes.value.data?.achievements) {
+        setAchievements(achRes.value.data.achievements);
+      }
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
-      // Mock data para demonstração
-      setProfile({
-        id: user?.id || 1,
-        name: user?.name || 'João Silva',
-        age: 28,
-        bio: 'Desenvolvedor apaixonado por tecnologia e aventuras. Amo viajar e conhecer pessoas novas!',
-        location: 'São Paulo, SP',
-        photos: [
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400'
-        ],
-        interests: ['Tecnologia', 'Viagem', 'Música', 'Esportes'],
-        premium: false,
-        verified: true
-      });
+      console.error('Erro ao buscar dados do perfil:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchProfileData();
   };
 
-  const handleImagePicker = async () => {
+  const handlePickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
     if (status !== 'granted') {
-      Alert.alert('Permissão necessária', 'Precisamos de permissão para acessar suas fotos.');
+      Alert.alert('Permissão necessária', 'Precisamos de acesso às suas fotos para atualizar seu avatar.');
       return;
     }
 
@@ -78,489 +88,458 @@ const ProfileScreen = ({ navigation }) => {
       quality: 0.8,
     });
 
-    if (!result.canceled) {
-      // Aqui você enviaria a imagem para o servidor
-      console.log('Nova foto selecionada:', result.assets[0].uri);
-      Alert.alert('Sucesso', 'Foto atualizada com sucesso!');
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      const photoUri = result.assets[0].uri;
+      try {
+        const formData = new FormData();
+        const filename = photoUri.split('/').pop() || 'avatar.jpg';
+        formData.append('photo', {
+          uri: photoUri,
+          name: filename,
+          type: 'image/jpeg',
+        });
+
+        const uploadRes = await usersAPI.uploadPhoto(formData);
+        const newAvatarUrl = uploadRes.data.photo_url || uploadRes.data.url || photoUri;
+
+        await usersAPI.updateProfile({ avatar_url: newAvatarUrl });
+        const updated = { ...(profile || user), avatar_url: newAvatarUrl };
+        setProfile(updated);
+        updateUser(updated);
+        Alert.alert('Foto Atualizada!', 'Sua foto de perfil foi alterada com sucesso.');
+      } catch (err) {
+        Alert.alert('Erro', 'Não foi possível atualizar a foto.');
+      }
     }
   };
 
-  const openEditModal = (field, currentValue) => {
-    setEditingField(field);
-    setEditValue(currentValue);
-    setEditModalVisible(true);
-  };
-
-  const saveEdit = async () => {
+  const handleSaveBio = async () => {
+    setSavingBio(true);
     try {
-      await api.put('/users/profile', {
-        [editingField]: editValue
-      });
-      
-      setProfile(prev => ({
-        ...prev,
-        [editingField]: editValue
-      }));
-      
-      setEditModalVisible(false);
-      Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar o perfil.');
+      await usersAPI.updateProfile({ bio: newBio.trim() });
+      const updated = { ...(profile || user), bio: newBio.trim() };
+      setProfile(updated);
+      updateUser(updated);
+      setShowBioModal(false);
+      Alert.alert('Sucesso', 'Sua biografia foi atualizada.');
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível salvar a biografia.');
+    } finally {
+      setSavingBio(false);
     }
   };
 
   const handleLogout = () => {
     Alert.alert(
-      'Sair',
-      'Tem certeza que deseja sair da sua conta?',
+      'Sair da Conta',
+      'Tem certeza que deseja desconectar do Proximous?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', style: 'destructive', onPress: logout }
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: () => logout(),
+        },
       ]
     );
   };
 
-  const toggleSetting = (setting) => {
-    setSettings(prev => ({
-      ...prev,
-      [setting]: !prev[setting]
-    }));
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Carregando perfil...</Text>
-      </View>
-    );
-  }
+  const avatarUrl = profile?.avatar_url || user?.avatar_url || generateAvatarUrl(profile?.name || user?.name || 'User');
+  const interestsList = profile?.interests || ['Tecnologia', 'Viagens', 'Música', 'Gastronomia'];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header com foto principal */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.photoContainer} onPress={handleImagePicker}>
-          <Image source={{ uri: profile.photos[0] }} style={styles.mainPhoto} />
-          <View style={styles.photoOverlay}>
-            <Ionicons name="camera" size={24} color={colors.white} />
-          </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.topHeader}>
+        <Text style={styles.topHeaderTitle}>Meu Perfil</Text>
+        <TouchableOpacity
+          style={styles.settingsBtn}
+          onPress={() => navigation.navigate('Matches')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="heart-outline" size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        
-        <View style={styles.headerInfo}>
-          <View style={styles.nameContainer}>
-            <Text style={styles.name}>{profile.name}</Text>
-            {profile.verified && (
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-            )}
-            {profile.premium && (
-              <View style={styles.premiumBadge}>
-                <Text style={styles.premiumText}>PREMIUM</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.ageLocation}>{profile.age} anos • {profile.location}</Text>
-        </View>
       </View>
 
-      {/* Informações do perfil */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Sobre mim</Text>
-          <TouchableOpacity onPress={() => openEditModal('bio', profile.bio)}>
-            <Ionicons name="pencil" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.bio}>{profile.bio}</Text>
-      </View>
-
-      {/* Fotos adicionais */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Minhas fotos</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
-          {profile.photos.map((photo, index) => (
-            <TouchableOpacity key={index} style={styles.additionalPhoto}>
-              <Image source={{ uri: photo }} style={styles.photoImage} />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
+      >
+        {/* User Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarWrapper}>
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <TouchableOpacity
+              style={styles.cameraBadge}
+              onPress={handlePickAvatar}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="camera" size={16} color={theme.colors.white} />
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.addPhotoButton} onPress={handleImagePicker}>
-            <Ionicons name="add" size={24} color={colors.gray} />
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+          </View>
 
-      {/* Interesses */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Interesses</Text>
-          <TouchableOpacity>
-            <Ionicons name="pencil" size={20} color={colors.primary} />
-          </TouchableOpacity>
+          <Text style={styles.userName}>{profile?.name || user?.name || 'Seu Nome'}</Text>
+          <Text style={styles.userUsername}>@{profile?.username || user?.username || 'proximous_user'}</Text>
+
+          {/* Bio Section */}
+          <View style={styles.bioContainer}>
+            <Text style={styles.bioText}>
+              {profile?.bio || 'Adicione uma breve apresentação para que as pessoas próximas conheçam você melhor.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.editBioBtn}
+              onPress={() => setShowBioModal(true)}
+            >
+              <Ionicons name="pencil-outline" size={14} color={theme.colors.primary} />
+              <Text style={styles.editBioText}>Editar Bio</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.interestsContainer}>
-          {profile.interests.map((interest, index) => (
-            <View key={index} style={styles.interestTag}>
-              <Text style={styles.interestText}>{interest}</Text>
+
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{stats?.matches_count || 0}</Text>
+            <Text style={styles.statLabel}>Matches</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{stats?.received_likes_count || 0}</Text>
+            <Text style={styles.statLabel}>Curtidas</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={[styles.statNum, { color: theme.colors.gold }]}>
+              {stats?.empathy_points || 120}
+            </Text>
+            <Text style={styles.statLabel}>Pontos de Empatia</Text>
+          </View>
+        </View>
+
+        {/* Interests */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Interesses & Afinidades</Text>
+          <View style={styles.tagsContainer}>
+            {interestsList.map((tag, idx) => (
+              <Badge
+                key={idx}
+                label={tag}
+                variant="primary"
+                size="md"
+                style={{ marginRight: 8, marginBottom: 8 }}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Quick Menu Actions */}
+        <View style={styles.menuCard}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Matches')}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconCircle, { backgroundColor: theme.colors.primarySoft }]}>
+                <Ionicons name="heart" size={18} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.menuItemText}>Meus Matches & Conexões</Text>
             </View>
-          ))}
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconCircle, { backgroundColor: theme.colors.secondarySoft }]}>
+                <Ionicons name="notifications" size={18} color={theme.colors.gold} />
+              </View>
+              <Text style={styles.menuItemText}>Central de Notificações</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, { borderBottomWidth: 0 }]}
+            onPress={handleLogout}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <Ionicons name="log-out-outline" size={18} color={theme.colors.danger} />
+              </View>
+              <Text style={[styles.menuItemText, { color: theme.colors.danger }]}>
+                Desconectar da Conta
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
 
-      {/* Configurações */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Configurações</Text>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="notifications" size={20} color={colors.gray} />
-            <Text style={styles.settingText}>Notificações</Text>
-          </View>
-          <Switch
-            value={settings.notifications}
-            onValueChange={() => toggleSetting('notifications')}
-            trackColor={{ false: colors.lightGray, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="calendar" size={20} color={colors.gray} />
-            <Text style={styles.settingText}>Mostrar idade</Text>
-          </View>
-          <Switch
-            value={settings.showAge}
-            onValueChange={() => toggleSetting('showAge')}
-            trackColor={{ false: colors.lightGray, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="location" size={20} color={colors.gray} />
-            <Text style={styles.settingText}>Mostrar distância</Text>
-          </View>
-          <Switch
-            value={settings.showDistance}
-            onValueChange={() => toggleSetting('showDistance')}
-            trackColor={{ false: colors.lightGray, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="eye-off" size={20} color={colors.gray} />
-            <Text style={styles.settingText}>Modo invisível</Text>
-          </View>
-          <Switch
-            value={settings.invisibleMode}
-            onValueChange={() => toggleSetting('invisibleMode')}
-            trackColor={{ false: colors.lightGray, true: colors.primary }}
-          />
-        </View>
-      </View>
-
-      {/* Ações */}
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="card" size={20} color={colors.primary} />
-          <Text style={styles.actionText}>Gerenciar assinatura</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="help-circle" size={20} color={colors.primary} />
-          <Text style={styles.actionText}>Ajuda e suporte</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-          <Text style={styles.actionText}>Privacidade e segurança</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Botão de logout */}
-      <View style={styles.section}>
-        <Button
-          title="Sair da conta"
-          onPress={handleLogout}
-          style={[styles.logoutButton, { backgroundColor: colors.danger }]}
-          textStyle={{ color: colors.white }}
-        />
-      </View>
-
-      {/* Modal de edição */}
+      {/* Edit Bio Modal */}
       <Modal
-        visible={editModalVisible}
+        visible={showBioModal}
+        transparent
         animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}
+        onRequestClose={() => setShowBioModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Editar {editingField === 'bio' ? 'biografia' : editingField}
-            </Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              value={editValue}
-              onChangeText={setEditValue}
-              multiline={editingField === 'bio'}
-              numberOfLines={editingField === 'bio' ? 4 : 1}
-              placeholder={`Digite sua ${editingField === 'bio' ? 'biografia' : editingField}...`}
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setEditModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={saveEdit}
-              >
-                <Text style={styles.saveButtonText}>Salvar</Text>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Biografia</Text>
+              <TouchableOpacity onPress={() => setShowBioModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
+
+            <TextInput
+              style={styles.bioInput}
+              value={newBio}
+              onChangeText={setNewBio}
+              placeholder="Fale um pouco sobre você..."
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+              numberOfLines={4}
+              maxLength={250}
+              autoFocus
+            />
+
+            <Text style={styles.charCount}>{newBio.length}/250 caracteres</Text>
+
+            <Button
+              title="Salvar Biografia"
+              onPress={handleSaveBio}
+              loading={savingBio}
+              size="md"
+              style={{ marginTop: 12 }}
+            />
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
   },
-  loadingContainer: {
-    flex: 1,
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm + 2,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  topHeaderTitle: {
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  settingsBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrollContent: {
+    padding: theme.spacing.md,
+    paddingBottom: 40,
+  },
+  profileCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
     alignItems: 'center',
-    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
+    ...theme.shadow.sm,
   },
-  loadingText: {
-    fontSize: 16,
-    color: colors.gray,
-  },
-  header: {
-    backgroundColor: colors.white,
-    paddingBottom: 20,
-    alignItems: 'center',
-  },
-  photoContainer: {
+  avatarWrapper: {
     position: 'relative',
-    marginTop: 20,
+    marginBottom: theme.spacing.md,
   },
-  mainPhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: theme.colors.primarySoft,
   },
-  photoOverlay: {
+  cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.white,
+    borderWidth: 2,
+    borderColor: theme.colors.white,
   },
-  headerInfo: {
-    alignItems: 'center',
-    marginTop: 16,
+  userName: {
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
   },
-  nameContainer: {
+  userUsername: {
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  bioContainer: {
+    marginTop: theme.spacing.md,
+    alignItems: 'center',
+    width: '100%',
+  },
+  bioText: {
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  editBioBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.primarySoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
   },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginRight: 8,
+  editBioText: {
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.primary,
+    marginLeft: 4,
   },
-  premiumBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  premiumText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  ageLocation: {
-    fontSize: 16,
-    color: colors.gray,
-  },
-  section: {
-    backgroundColor: colors.white,
-    marginTop: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  sectionHeader: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
+    ...theme.shadow.sm,
+  },
+  statBox: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: theme.colors.border,
+  },
+  statNum: {
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.primary,
+  },
+  statLabel: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  sectionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
+    ...theme.shadow.sm,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
   },
-  bio: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  photosContainer: {
-    marginTop: 12,
-  },
-  additionalPhoto: {
-    marginRight: 12,
-  },
-  photoImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  addPhotoButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.lightGray,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  interestsContainer: {
+  tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 12,
   },
-  interestTag: {
-    backgroundColor: colors.background,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+  menuCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.sm,
   },
-  interestText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  settingItem: {
+  menuItem: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    borderBottomColor: theme.colors.borderLight,
   },
-  settingInfo: {
+  menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  settingText: {
-    fontSize: 16,
-    color: colors.text,
-    marginLeft: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
+  menuIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
-  actionText: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    marginLeft: 12,
-  },
-  logoutButton: {
-    marginTop: 8,
+  menuItemText: {
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.textPrimary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    ...theme.shadow.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: colors.lightGray,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 20,
+  bioInput: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textPrimary,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.background,
-    marginRight: 8,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    marginLeft: 8,
-  },
-  cancelButtonText: {
-    color: colors.gray,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  saveButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '500',
+  charCount: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textMuted,
+    textAlign: 'right',
+    marginTop: 4,
   },
 });
 
 export default ProfileScreen;
-

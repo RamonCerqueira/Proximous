@@ -95,9 +95,11 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # CORS configuration
-allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:5174')
+allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:8081,http://localhost:8082,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:5174,http://127.0.0.1:8081,http://127.0.0.1:8082')
 allowed_origins = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
-CORS(app, origins=allowed_origins, allow_headers=["Content-Type", "Authorization"])
+# Include wildcard matching for localhost development ports and production domains
+CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization", "X-Requested-With"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
+
 
 # Rate Limiter configuration
 def get_client_ip():

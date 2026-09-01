@@ -1,272 +1,333 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
-  PanGesturer,
   Animated,
-  Alert,
+  PanResponder,
   TouchableOpacity,
+  Image,
+  Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { usersAPI, matchingAPI } from '../../config/api';
-import { formatUserAge, formatDistance, getSocialStyleColor } from '../../utils/helpers';
+import { formatDistance, generateAvatarUrl } from '../../utils/helpers';
 import { theme } from '../../styles/colors';
+import Badge from '../../components/common/Badge';
+import EmptyState from '../../components/common/EmptyState';
 import Button from '../../components/common/Button';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth - 40;
-const CARD_HEIGHT = screenHeight * 0.7;
+const SWIPE_THRESHOLD = 120;
 
 const DiscoverScreen = ({ navigation }) => {
   const [users, setUsers] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState({
-    max_distance: 50,
+    max_distance: 30,
     min_age: 18,
-    max_age: 65,
-    gender: 'all',
-    social_style: 'all',
-    intent_mode: 'all'
+    max_age: 60,
   });
 
-  const pan = new Animated.ValueXY();
-  const scale = new Animated.Value(1);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [filters]);
+  const position = useRef(new Animated.ValueXY()).current;
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await usersAPI.discover(filters);
-      setUsers(response.data.users || []);
+
+      // Request location permission gracefully
+      let coords = null;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (loc?.coords) {
+            coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            await usersAPI.updateLocation(coords);
+          }
+        }
+      } catch (locErr) {
+        console.log('Location fetch notice:', locErr);
+      }
+
+      const params = {
+        ...filters,
+        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+      };
+
+      const res = await usersAPI.discover(params);
+      setUsers(res.data.users || []);
       setCurrentIndex(0);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      Alert.alert('Erro', 'Não foi possível carregar usuários. Tente novamente.');
+      console.error('Erro ao buscar usuários:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSwipe = async (direction, likeType = 'like') => {
-    if (currentIndex >= users.length) return;
+  useEffect(() => {
+    fetchUsers();
+  }, [filters]);
 
-    const currentUser = users[currentIndex];
-    
-    if (direction === 'right') {
-      try {
-        await matchingAPI.sendLike({
-          target_user_id: currentUser.id,
-          like_type: likeType
-        });
-        
-        // Show match animation if it's a match
-        // This would be implemented with a match modal
-      } catch (error) {
-        console.error('Error sending like:', error);
-      }
-    }
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        position.setValue({ x: gesture.dx, y: gesture.dy });
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx > SWIPE_THRESHOLD) {
+          swipeCard('right');
+        } else if (gesture.dx < -SWIPE_THRESHOLD) {
+          swipeCard('left');
+        } else {
+          resetPosition();
+        }
+      },
+    })
+  ).current;
 
-    // Animate card out
-    Animated.timing(pan, {
-      toValue: { x: direction === 'right' ? screenWidth : -screenWidth, y: 0 },
-      duration: 300,
+  const resetPosition = () => {
+    Animated.spring(position, {
+      toValue: { x: 0, y: 0 },
+      friction: 5,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const swipeCard = (direction, likeType = 'like') => {
+    const x = direction === 'right' ? screenWidth + 100 : -screenWidth - 100;
+    Animated.timing(position, {
+      toValue: { x, y: 0 },
+      duration: 250,
       useNativeDriver: false,
     }).start(() => {
-      setCurrentIndex(prev => prev + 1);
-      pan.setValue({ x: 0, y: 0 });
-      scale.setValue(1);
+      onSwipeComplete(direction, likeType);
     });
   };
 
-  const handleLike = () => handleSwipe('right', 'like');
-  const handleSuperLike = () => handleSwipe('right', 'super_like');
-  const handlePass = () => handleSwipe('left');
+  const onSwipeComplete = async (direction, likeType) => {
+    const currentUser = users[currentIndex];
+    position.setValue({ x: 0, y: 0 });
+    setCurrentIndex(prev => prev + 1);
 
-  const UserCard = ({ user, index }) => {
-    const isActive = index === currentIndex;
-    const isNext = index === currentIndex + 1;
-    
+    if (direction === 'right' && currentUser) {
+      try {
+        const res = await matchingAPI.sendLike({
+          target_user_id: currentUser.id,
+          like_type: likeType,
+        });
+
+        if (res.data?.is_match) {
+          Alert.alert(
+            '🎉 É um Match!',
+            `Você e ${currentUser.name} se conectaram. Que tal mandar uma mensagem agora?`,
+            [
+              { text: 'Continuar Descobrindo', style: 'cancel' },
+              {
+                text: 'Enviar Mensagem',
+                onPress: () => navigation.navigate('Messages'),
+              },
+            ]
+          );
+        }
+      } catch (err) {
+        console.error('Erro ao enviar like:', err);
+      }
+    }
+  };
+
+  const handlePass = () => swipeCard('left');
+  const handleLike = () => swipeCard('right', 'like');
+  const handleSuperLike = () => swipeCard('right', 'super_like');
+
+  const renderCard = (user, index) => {
     if (index < currentIndex) return null;
 
-    const cardStyle = {
-      position: 'absolute',
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      borderRadius: theme.borderRadius.xl,
-      backgroundColor: theme.colors.white,
-      ...theme.shadow.lg,
-    };
+    const isTopCard = index === currentIndex;
+    const rotate = position.x.interpolate({
+      inputRange: [-screenWidth * 1.5, 0, screenWidth * 1.5],
+      outputRange: ['-18deg', '0deg', '18deg'],
+    });
 
-    if (isActive) {
-      cardStyle.transform = [
-        { translateX: pan.x },
-        { translateY: pan.y },
-        { scale: scale },
-      ];
-    } else if (isNext) {
-      cardStyle.transform = [{ scale: 0.95 }];
-      cardStyle.opacity = 0.8;
-    } else {
-      cardStyle.transform = [{ scale: 0.9 }];
-      cardStyle.opacity = 0.6;
-    }
+    const cardStyle = isTopCard
+      ? {
+          ...styles.card,
+          transform: [...position.getTranslateTransform(), { rotate }],
+        }
+      : {
+          ...styles.card,
+          transform: [{ scale: 0.95 }],
+          top: 10,
+        };
+
+    const avatarUrl = user.avatar_url || user.photos?.[0] || generateAvatarUrl(user.name);
+    const distanceText = user.distance_km != null 
+      ? formatDistance(user.distance_km) 
+      : 'Próximo a você';
 
     return (
-      <Animated.View style={cardStyle}>
+      <Animated.View
+        key={user.id}
+        style={cardStyle}
+        {...(isTopCard ? panResponder.panHandlers : {})}
+      >
+        <Image source={{ uri: avatarUrl }} style={styles.cardImage} resizeMode="cover" />
+
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          colors={['transparent', 'rgba(9, 7, 18, 0.4)', 'rgba(9, 7, 18, 0.92)']}
           style={styles.cardGradient}
         >
-          {/* User Photo */}
-          <View style={styles.photoContainer}>
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="person" size={80} color={theme.colors.textSecondary} />
-            </View>
+          {/* Proximity Pill */}
+          <View style={styles.distanceBadge}>
+            <Ionicons name="location-sharp" size={12} color={theme.colors.gold} />
+            <Text style={styles.distanceText}>{distanceText}</Text>
           </View>
 
-          {/* User Info */}
-          <View style={styles.userInfo}>
-            <View style={styles.userHeader}>
-              <Text style={styles.userName}>
-                {user.name}, {formatUserAge(user.birth_date)}
-              </Text>
-              <View style={styles.distanceContainer}>
-                <Ionicons name="location" size={16} color={theme.colors.white} />
-                <Text style={styles.distance}>
-                  {formatDistance(user.distance || 0)}
-                </Text>
-              </View>
+          {/* User Name and Age */}
+          <Text style={styles.userName}>
+            {user.name}{user.age ? `, ${user.age}` : ''}
+          </Text>
+
+          {/* Bio snippet */}
+          {user.bio ? (
+            <Text style={styles.userBio} numberOfLines={2}>
+              {user.bio}
+            </Text>
+          ) : null}
+
+          {/* Interests Tags */}
+          {user.interests && user.interests.length > 0 && (
+            <View style={styles.tagsRow}>
+              {user.interests.slice(0, 3).map((interest, idx) => (
+                <Badge
+                  key={idx}
+                  label={interest}
+                  variant="gold"
+                  size="sm"
+                  style={{ marginRight: 6, marginBottom: 4 }}
+                />
+              ))}
             </View>
-
-            {user.bio && (
-              <Text style={styles.userBio} numberOfLines={3}>
-                {user.bio}
-              </Text>
-            )}
-
-            {/* Personality Tags */}
-            {user.personality_tags && user.personality_tags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {user.personality_tags.slice(0, 3).map((tag, tagIndex) => (
-                  <View key={tagIndex} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Social Style */}
-            <View style={[
-              styles.socialStyleBadge,
-              { backgroundColor: getSocialStyleColor(user.social_style) }
-            ]}>
-              <Text style={styles.socialStyleText}>
-                {user.social_style === 'shy' ? 'Tímido(a)' :
-                 user.social_style === 'introverted' ? 'Introvertido(a)' :
-                 'Extrovertido(a)'}
-              </Text>
-            </View>
-          </View>
+          )}
         </LinearGradient>
       </Animated.View>
     );
   };
 
-  const NoMoreCards = () => (
-    <View style={styles.noMoreCards}>
-      <Ionicons name="heart-outline" size={80} color={theme.colors.textSecondary} />
-      <Text style={styles.noMoreCardsTitle}>
-        Não há mais pessoas por aqui
-      </Text>
-      <Text style={styles.noMoreCardsSubtitle}>
-        Tente ajustar seus filtros ou volte mais tarde
-      </Text>
-      <Button
-        title="Ajustar filtros"
-        onPress={() => {
-          // Open filters modal
-          Alert.alert('Em breve', 'Filtros serão implementados em breve');
-        }}
-        style={styles.filtersButton}
-      />
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text>Carregando pessoas próximas...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>Descobrir</Text>
         <TouchableOpacity
           style={styles.filterButton}
-          onPress={() => {
-            Alert.alert('Em breve', 'Filtros serão implementados em breve');
-          }}
+          onPress={() => setShowFilterModal(true)}
+          activeOpacity={0.7}
         >
-          <Ionicons name="options" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Descobrir</Text>
-        
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Ionicons name="settings" size={24} color={theme.colors.primary} />
+          <Ionicons name="options-outline" size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.cardsContainer}>
-        {currentIndex >= users.length ? (
-          <NoMoreCards />
+      {/* Cards Deck */}
+      <View style={styles.deckContainer}>
+        {loading ? (
+          <EmptyState
+            icon="compass-outline"
+            title="Buscando pessoas..."
+            description="Aguarde um instante enquanto mapeamos conexões por perto."
+          />
+        ) : currentIndex >= users.length ? (
+          <EmptyState
+            icon="sparkles-outline"
+            title="Você viu todos por perto!"
+            description="Tente expandir o raio de distância nos filtros ou retorne mais tarde."
+            actionTitle="Ajustar Filtros"
+            onActionPress={() => setShowFilterModal(true)}
+          />
         ) : (
-          users.map((user, index) => (
-            <UserCard key={user.id} user={user} index={index} />
-          ))
+          users.map((user, idx) => renderCard(user, idx)).reverse()
         )}
       </View>
 
-      {/* Action Buttons */}
-      {currentIndex < users.length && (
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.passButton]}
-            onPress={handlePass}
-          >
-            <Ionicons name="close" size={32} color={theme.colors.error} />
+      {/* Bottom Action Controls */}
+      {currentIndex < users.length && !loading && (
+        <View style={styles.actionControls}>
+          <TouchableOpacity style={[styles.controlBtn, styles.passBtn]} onPress={handlePass} activeOpacity={0.8}>
+            <Ionicons name="close" size={28} color={theme.colors.danger} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.superLikeButton]}
-            onPress={handleSuperLike}
-          >
-            <Ionicons name="star" size={24} color={theme.colors.warning} />
+          <TouchableOpacity style={[styles.controlBtn, styles.superLikeBtn]} onPress={handleSuperLike} activeOpacity={0.8}>
+            <Ionicons name="star" size={26} color={theme.colors.gold} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={handleLike}
-          >
-            <Ionicons name="heart" size={32} color={theme.colors.error} />
+          <TouchableOpacity style={[styles.controlBtn, styles.likeBtn]} onPress={handleLike} activeOpacity={0.8}>
+            <Ionicons name="heart" size={28} color={theme.colors.white} />
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Filters Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.filterModalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filtros de Descoberta</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterLabel}>
+              Raio de Distância Máxima: <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>{filters.max_distance} km</Text>
+            </Text>
+            <View style={styles.distanceOptions}>
+              {[10, 25, 50, 100].map((dist) => (
+                <TouchableOpacity
+                  key={dist}
+                  style={[
+                    styles.distanceOptionChip,
+                    filters.max_distance === dist && styles.distanceOptionChipActive,
+                  ]}
+                  onPress={() => setFilters(prev => ({ ...prev, max_distance: dist }))}
+                >
+                  <Text
+                    style={[
+                      styles.distanceOptionText,
+                      filters.max_distance === dist && styles.distanceOptionTextActive,
+                    ]}
+                  >
+                    {dist} km
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Button
+              title="Aplicar Filtros"
+              onPress={() => setShowFilterModal(false)}
+              size="md"
+              style={{ marginTop: 24 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -274,215 +335,170 @@ const DiscoverScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: theme.colors.background,
   },
-  
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.white,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  
   headerTitle: {
-    fontSize: theme.fontSize.lg,
+    fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
   },
-  
   filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${theme.colors.primary}20`,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${theme.colors.primary}20`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  cardsContainer: {
+  deckContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
-  
-  cardGradient: {
-    flex: 1,
+  card: {
+    position: 'absolute',
+    width: screenWidth - 32,
+    height: screenHeight * 0.62,
     borderRadius: theme.borderRadius.xl,
     overflow: 'hidden',
+    backgroundColor: theme.colors.black,
+    ...theme.shadow.lg,
   },
-  
-  photoContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardImage: {
+    width: '100%',
+    height: '100%',
   },
-  
-  photoPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.gray[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  userInfo: {
+  cardGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: theme.spacing.lg,
   },
-  
-  userHeader: {
+  distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
+    backgroundColor: 'rgba(9, 7, 18, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.full,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
   },
-  
+  distanceText: {
+    color: theme.colors.white,
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.medium,
+    marginLeft: 4,
+  },
   userName: {
     fontSize: theme.fontSize.xxl,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.white,
-    flex: 1,
   },
-  
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  
-  distance: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.white,
-    marginLeft: theme.spacing.xs,
-  },
-  
   userBio: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.white,
-    lineHeight: theme.lineHeight.relaxed,
-    marginBottom: theme.spacing.md,
+    fontSize: theme.fontSize.sm,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 4,
+    lineHeight: 18,
   },
-  
-  tagsContainer: {
+  tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: theme.spacing.md,
+    marginTop: 8,
   },
-  
-  tag: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: theme.borderRadius.full,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  tagText: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.white,
-    fontWeight: theme.fontWeight.medium,
-  },
-  
-  socialStyleBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: theme.borderRadius.full,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  
-  socialStyleText: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  
-  actionsContainer: {
+  actionControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
+    justifyContent: 'space-evenly',
+    paddingVertical: theme.spacing.md,
+    paddingBottom: 20,
   },
-  
-  actionButton: {
+  controlBtn: {
     width: 60,
     height: 60,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     ...theme.shadow.md,
   },
-  
-  passButton: {
-    backgroundColor: theme.colors.white,
-    borderWidth: 2,
-    borderColor: theme.colors.error,
+  passBtn: {
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  
-  superLikeButton: {
-    backgroundColor: theme.colors.white,
-    borderWidth: 2,
-    borderColor: theme.colors.warning,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  superLikeBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderColor: 'rgba(217, 119, 6, 0.3)',
   },
-  
-  likeButton: {
-    backgroundColor: theme.colors.white,
-    borderWidth: 2,
-    borderColor: theme.colors.error,
+  likeBtn: {
+    backgroundColor: theme.colors.heart,
+    borderColor: theme.colors.heart,
   },
-  
-  noMoreCards: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  filterModalCard: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    ...theme.shadow.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
   },
-  
-  noMoreCardsTitle: {
-    fontSize: theme.fontSize.xl,
+  modalTitle: {
+    fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
   },
-  
-  noMoreCardsSubtitle: {
-    fontSize: theme.fontSize.md,
+  filterLabel: {
+    fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: theme.lineHeight.relaxed,
-    marginBottom: theme.spacing.xl,
+    marginBottom: 12,
   },
-  
-  filtersButton: {
-    marginTop: theme.spacing.lg,
+  distanceOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  distanceOptionChip: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.primarySoft,
+  },
+  distanceOptionChipActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  distanceOptionText: {
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.primary,
+  },
+  distanceOptionTextActive: {
+    color: theme.colors.white,
   },
 });
 
 export default DiscoverScreen;
-

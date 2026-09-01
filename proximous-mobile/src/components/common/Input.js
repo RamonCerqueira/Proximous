@@ -46,6 +46,7 @@ const Input = ({
       <View style={[
         styles.inputContainer,
         { borderColor: getBorderColor() },
+        isFocused && styles.inputFocused,
         !editable && styles.inputDisabled
       ]}>
         {leftIcon && (
@@ -63,7 +64,7 @@ const Input = ({
             inputStyle
           ]}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={theme.colors.textMuted}
           value={value}
           onChangeText={onChangeText}
           onFocus={handleFocus}
@@ -73,6 +74,7 @@ const Input = ({
           multiline={multiline}
           numberOfLines={numberOfLines}
           editable={editable}
+          selectionColor={theme.colors.primary}
           {...props}
         />
         
@@ -80,11 +82,13 @@ const Input = ({
           <TouchableOpacity
             style={styles.rightIconContainer}
             onPress={togglePasswordVisibility}
+            activeOpacity={0.6}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons
-              name={isPasswordVisible ? 'eye-off' : 'eye'}
+              name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={theme.colors.textSecondary}
+              color={isFocused ? theme.colors.primary : theme.colors.textSecondary}
             />
           </TouchableOpacity>
         )}
@@ -93,6 +97,7 @@ const Input = ({
           <TouchableOpacity
             style={styles.rightIconContainer}
             onPress={onRightIconPress}
+            activeOpacity={0.6}
           >
             {rightIcon}
           </TouchableOpacity>
@@ -100,7 +105,10 @@ const Input = ({
       </View>
       
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.errorRow}>
+          <Ionicons name="alert-circle" size={14} color={theme.colors.error} style={{ marginRight: 4 }} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
       )}
     </View>
   );
@@ -121,11 +129,16 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.white,
-    minHeight: 48,
+    backgroundColor: theme.colors.surface,
+    minHeight: 50,
     ...theme.shadow.sm,
+  },
+  
+  inputFocused: {
+    backgroundColor: theme.colors.white,
+    borderColor: theme.colors.primary,
   },
   
   inputDisabled: {
@@ -142,9 +155,9 @@ const styles = StyleSheet.create({
   },
   
   inputMultiline: {
-    minHeight: 80,
+    minHeight: 90,
     textAlignVertical: 'top',
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.spacing.sm + 4,
   },
   
   inputWithLeftIcon: {
@@ -165,12 +178,17 @@ const styles = StyleSheet.create({
     paddingLeft: theme.spacing.sm,
   },
   
-  errorText: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.error,
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: theme.spacing.xs,
+  },
+  
+  errorText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.error,
+    fontWeight: theme.fontWeight.medium,
   },
 });
 
 export default Input;
-

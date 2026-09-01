@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,60 +8,78 @@ import {
   Image,
   Modal,
   TextInput,
-  ActivityIndicator,
+  RefreshControl,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { usersAPI, activitiesAPI, matchingAPI } from '../../config/api';
-import { colors } from '../../styles/colors';
+import { formatDistance, generateAvatarUrl } from '../../utils/helpers';
+import { theme } from '../../styles/colors';
+import Button from '../../components/common/Button';
+import Badge from '../../components/common/Badge';
+import EmptyState from '../../components/common/EmptyState';
 
 const NowScreen = ({ navigation }) => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [activitiesList, setActivitiesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [myAvailability, setMyAvailability] = useState(null);
 
-  // Availability Modal
+  // Modals
   const [showAvailModal, setShowAvailModal] = useState(false);
-  const [availText, setAvailText] = useState('Tomar um café agora');
+  const [availText, setAvailText] = useState('Tomar um café agora ☕');
   const [availHours, setAvailHours] = useState(2);
 
-  // Create Activity Modal
   const [showActModal, setShowActModal] = useState(false);
   const [actTitle, setActTitle] = useState('');
   const [actCategory, setActCategory] = useState('coffee');
   const [actDesc, setActDesc] = useState('');
+  const [creatingAct, setCreatingAct] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [availRes, actRes] = await Promise.allSettled([
+        usersAPI.discover({ available_now: true, max_distance: 50 }),
+        activitiesAPI.getNearby({ radius: 50 }),
+      ]);
+
+      if (availRes.status === 'fulfilled') {
+        setAvailableUsers(availRes.value.data?.users || []);
+      }
+      if (actRes.status === 'fulfilled') {
+        setActivitiesList(actRes.value.data?.activities || []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados do Modo AGORA:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [availRes, actRes] = await Promise.all([
-        usersAPI.discover({ available_now: true, radius: 50 }),
-        activitiesAPI.getNearby({ radius: 50 }),
-      ]);
-      setAvailableUsers(availRes.data.users || []);
-      setActivitiesList(actRes.data.activities || []);
-    } catch (error) {
-      console.error('Error fetching Modo AGORA data:', error);
-    } finally {
-      setLoading(false);
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
   };
 
   const handleSetAvailability = async (clear = false) => {
     try {
       await usersAPI.updateAvailability({
         hours: availHours,
-        status_text: availText,
+        status_text: clear ? '' : availText,
         clear,
       });
+      setMyAvailability(clear ? null : { status_text: availText, hours: availHours });
       setShowAvailModal(false);
       fetchData();
+      Alert.alert('Sucesso', clear ? 'Sua disponibilidade foi desativada.' : 'Seu status de disponibilidade está ativo!');
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível atualizar sua disponibilidade.');
     }
@@ -72,248 +90,292 @@ const NowScreen = ({ navigation }) => {
       Alert.alert('Atenção', 'Informe um título para o convite.');
       return;
     }
+    setCreatingAct(true);
     try {
       await activitiesAPI.create({
-        title: actTitle,
+        title: actTitle.trim(),
         category: actCategory,
-        description: actDesc,
+        description: actDesc.trim(),
         duration_hours: 4,
       });
       setShowActModal(false);
       setActTitle('');
       setActDesc('');
       fetchData();
+      Alert.alert('Convite Criado!', 'Seu convite está visível para pessoas próximas.');
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível criar o convite.');
+    } finally {
+      setCreatingAct(false);
     }
   };
 
-  const handleConnect = async (userId) => {
+  const handleJoinActivity = async (activityId) => {
     try {
-      await matchingAPI.sendLike({ receiver_id: userId, like_type: 'like' });
-      Alert.alert('Conectado!', 'Seu interesse foi enviado com sucesso.');
-    } catch (error) {
-      console.error('Error connecting:', error);
-    }
-  };
-
-  const handleJoin = async (actId) => {
-    try {
-      await activitiesAPI.join(actId);
-      Alert.alert('Sucesso', 'Você entrou no convite!');
+      await activitiesAPI.join(activityId);
+      Alert.alert('Presença Confirmada!', 'Você agora faz parte desta atividade.');
       fetchData();
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível entrar no convite.');
+      Alert.alert('Aviso', error.response?.data?.message || 'Você já faz parte desta atividade.');
+    }
+  };
+
+  const handleConnectUser = async (userId, userName) => {
+    try {
+      await matchingAPI.sendLike({ target_user_id: userId, like_type: 'like' });
+      Alert.alert('Conectado!', `Você enviou um interesse para ${userName}.`);
+    } catch (error) {
+      console.error('Erro ao conectar:', error);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Banner AGORA */}
-        <LinearGradient
-          colors={[colors.primary, '#8e44ad']}
-          style={styles.bannerCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.bannerHeader}>
-            <View style={styles.liveTag}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>MODO AGORA</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitle}>⚡ Modo AGORA</Text>
+          <Badge label="Tempo Real" variant="gold" size="sm" />
+        </View>
+        <Text style={styles.headerSubtitle}>
+          Encontros espontâneos e companhias disponíveis nas próximas horas
+        </Text>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.gold]} />
+        }
+      >
+        {/* Availability Banner */}
+        <View style={styles.myAvailCard}>
+          <LinearGradient
+            colors={theme.colors.gradientGold}
+            style={styles.availGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.availTextCol}>
+              <Text style={styles.availCardTitle}>
+                {myAvailability ? 'Você está Disponível!' : 'Está livre agora?'}
+              </Text>
+              <Text style={styles.availCardDesc}>
+                {myAvailability
+                  ? `Status: "${myAvailability.status_text}"`
+                  : 'Avise quem está por perto que você topa um café ou passeio.'}
+              </Text>
             </View>
+
             <TouchableOpacity
-              style={styles.changeBtn}
+              style={styles.availToggleBtn}
               onPress={() => setShowAvailModal(true)}
+              activeOpacity={0.85}
             >
-              <Ionicons name="time-outline" size={14} color="#FFF" />
-              <Text style={styles.changeBtnText}>Status</Text>
+              <Text style={styles.availToggleText}>
+                {myAvailability ? 'Alterar' : 'Ativar'}
+              </Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
+        </View>
 
-          <Text style={styles.bannerTitle}>O que você quer fazer hoje?</Text>
-          <Text style={styles.bannerSubtitle}>
-            Apareça para pessoas próximas que querem a mesma coisa agora.
-          </Text>
-
-          <View style={styles.bannerActions}>
-            <TouchableOpacity
-              style={styles.primaryActionBtn}
-              onPress={() => setShowAvailModal(true)}
-            >
-              <Ionicons name="flash" size={16} color={colors.primary} />
-              <Text style={styles.primaryActionText}>Disponível Agora</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryActionBtn}
-              onPress={() => setShowActModal(true)}
-            >
-              <Ionicons name="add-circle-outline" size={16} color="#FFF" />
-              <Text style={styles.secondaryActionText}>Criar Convite</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-
-        {/* Section 1: Disponíveis Agora */}
+        {/* Section: People Available Now */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🟢 Pessoas Disponíveis Agora</Text>
-          <TouchableOpacity onPress={fetchData}>
-            <Ionicons name="refresh" size={18} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Pessoas Disponíveis Agora</Text>
+          <Badge label={`${availableUsers.length}`} variant="primary" size="sm" />
+        </View>
+
+        {availableUsers.length === 0 ? (
+          <EmptyState
+            icon="time-outline"
+            title="Ninguém ativo por perto ainda"
+            description="Ative seu status acima para inspirar outras pessoas a se conectarem."
+          />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalUsersList}
+          >
+            {availableUsers.map((item) => {
+              const avatar = item.avatar_url || generateAvatarUrl(item.name);
+              return (
+                <View key={item.id} style={styles.userCard}>
+                  <View style={styles.userAvatarContainer}>
+                    <Image source={{ uri: avatar }} style={styles.userAvatar} />
+                    <View style={styles.liveDot} />
+                  </View>
+                  <Text style={styles.userName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.userDistance}>
+                    {item.distance_km != null ? formatDistance(item.distance_km) : 'Por perto'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.connectBtn}
+                    onPress={() => handleConnectUser(item.id, item.name)}
+                  >
+                    <Ionicons name="chatbubble-outline" size={14} color={theme.colors.white} />
+                    <Text style={styles.connectBtnText}>Chamar</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {/* Section: Activities */}
+        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+          <Text style={styles.sectionTitle}>Convites Rápidos de Atividades</Text>
+          <TouchableOpacity
+            style={styles.createActPill}
+            onPress={() => setShowActModal(true)}
+          >
+            <Ionicons name="add" size={16} color={theme.colors.gold} />
+            <Text style={styles.createActPillText}>Criar Convite</Text>
           </TouchableOpacity>
         </View>
 
-        {loading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
-        ) : availableUsers.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Ninguém disponível por perto agora.</Text>
-          </View>
-        ) : (
-          availableUsers.map((item) => (
-            <View key={item.id} style={styles.userCard}>
-              <Image
-                source={{
-                  uri:
-                    item.profile_photo_url ||
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-                }}
-                style={styles.avatar}
-              />
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>
-                  {item.name}, {item.age}
-                </Text>
-                <Text style={styles.userStatus}>
-                  "{item.current_status_text || 'Disponível para sair'}"
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.connectBtn}
-                onPress={() => handleConnect(item.id)}
-              >
-                <Text style={styles.connectBtnText}>Bora</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-
-        {/* Section 2: Convites Abertos */}
-        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
-          <Text style={styles.sectionTitle}>🎉 Convites Abertos</Text>
-        </View>
-
-        {loading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
-        ) : activitiesList.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Nenhum convite aberto por perto.</Text>
-          </View>
+        {activitiesList.length === 0 ? (
+          <EmptyState
+            icon="cafe-outline"
+            title="Nenhum convite criado ainda"
+            description="Crie um convite para tomar um café, caminhar ou praticar esportes!"
+            actionTitle="Criar Convite Rápido"
+            onActionPress={() => setShowActModal(true)}
+          />
         ) : (
           activitiesList.map((act) => (
-            <View key={act.id} style={styles.actCard}>
-              <Text style={styles.actCategory}>{act.category?.toUpperCase() || 'GERAL'}</Text>
-              <Text style={styles.actTitle}>{act.title}</Text>
-              {!!act.description && (
+            <View key={act.id} style={styles.activityCard}>
+              <View style={styles.actHeader}>
+                <View style={styles.actTitleRow}>
+                  <Ionicons name="flash" size={18} color={theme.colors.gold} style={{ marginRight: 6 }} />
+                  <Text style={styles.actTitle}>{act.title}</Text>
+                </View>
+                <Badge label={act.category || 'Atividade'} variant="gold" size="sm" />
+              </View>
+
+              {act.description ? (
                 <Text style={styles.actDesc}>{act.description}</Text>
-              )}
+              ) : null}
+
               <View style={styles.actFooter}>
-                <Text style={styles.actLoc}>📍 {act.location_name || 'Próximo'}</Text>
-                <TouchableOpacity
-                  style={styles.joinBtn}
-                  onPress={() => handleJoin(act.id)}
-                >
-                  <Text style={styles.joinBtnText}>Participar</Text>
-                </TouchableOpacity>
+                <View style={styles.participantsCount}>
+                  <Ionicons name="people-outline" size={16} color={theme.colors.textSecondary} />
+                  <Text style={styles.participantsText}>
+                    {act.participants_count || 1} participante(s)
+                  </Text>
+                </View>
+
+                <Button
+                  title="Eu Topo!"
+                  variant="gold"
+                  size="sm"
+                  onPress={() => handleJoinActivity(act.id)}
+                />
               </View>
             </View>
           ))
         )}
       </ScrollView>
 
-      {/* Availability Modal */}
-      <Modal visible={showAvailModal} transparent animationType="slide">
+      {/* Set Availability Modal */}
+      <Modal
+        visible={showAvailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAvailModal(false)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>⚡ Ficar Disponível Agora</Text>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Definir Disponibilidade</Text>
+              <TouchableOpacity onPress={() => setShowAvailModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>O que você gostaria de fazer?</Text>
             <TextInput
-              style={styles.input}
-              placeholder="O que você quer fazer?"
+              style={styles.modalInput}
               value={availText}
               onChangeText={setAvailText}
+              placeholder="Ex: Tomar um café, correr no parque..."
             />
-            <Text style={styles.label}>Duração ({availHours} horas):</Text>
-            <View style={styles.hoursRow}>
-              {[1, 2, 4, 6].map((h) => (
+
+            <View style={styles.quickOptionsRow}>
+              {['Tomar um café ☕', 'Caminhar no parque 🌳', 'Conversar sobre ideias 💡'].map((opt, i) => (
                 <TouchableOpacity
-                  key={h}
-                  style={[
-                    styles.hourChip,
-                    availHours === h && styles.hourChipActive,
-                  ]}
-                  onPress={() => setAvailHours(h)}
+                  key={i}
+                  style={styles.optChip}
+                  onPress={() => setAvailText(opt)}
                 >
-                  <Text
-                    style={[
-                      styles.hourChipText,
-                      availHours === h && styles.hourChipTextActive,
-                    ]}
-                  >
-                    {h}h
-                  </Text>
+                  <Text style={styles.optChipText}>{opt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setShowAvailModal(false)}
-              >
-                <Text style={styles.cancelBtnText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmBtn}
-                onPress={() => handleSetAvailability(false)}
-              >
-                <Text style={styles.confirmBtnText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
+
+            <Button
+              title="Salvar Disponibilidade"
+              variant="gold"
+              size="md"
+              onPress={() => handleSetAvailability(false)}
+              style={{ marginTop: 16 }}
+            />
+
+            {myAvailability && (
+              <Button
+                title="Desativar Modo AGORA"
+                variant="ghost"
+                size="sm"
+                onPress={() => handleSetAvailability(true)}
+                style={{ marginTop: 8 }}
+              />
+            )}
           </View>
         </View>
       </Modal>
 
       {/* Create Activity Modal */}
-      <Modal visible={showActModal} transparent animationType="slide">
+      <Modal
+        visible={showActModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowActModal(false)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>🎉 Criar Convite Aberto</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: Alguém para cinema hoje 20h?"
-              value={actTitle}
-              onChangeText={setActTitle}
-            />
-            <TextInput
-              style={[styles.input, { height: 60 }]}
-              placeholder="Descrição ou detalhes (opcional)"
-              multiline
-              value={actDesc}
-              onChangeText={setActDesc}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setShowActModal(false)}
-              >
-                <Text style={styles.cancelBtnText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmBtn}
-                onPress={handleCreateActivity}
-              >
-                <Text style={styles.confirmBtnText}>Publicar</Text>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Criar Convite Rápido</Text>
+              <TouchableOpacity onPress={() => setShowActModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
+
+            <Text style={styles.inputLabel}>Título do Convite</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={actTitle}
+              onChangeText={setActTitle}
+              placeholder="Ex: Café e bate-papo no centro"
+            />
+
+            <Text style={styles.inputLabel}>Descrição (Opcional)</Text>
+            <TextInput
+              style={[styles.modalInput, { minHeight: 70, textAlignVertical: 'top' }]}
+              value={actDesc}
+              onChangeText={setActDesc}
+              placeholder="Detalhes adicionais..."
+              multiline
+            />
+
+            <Button
+              title="Publicar Convite"
+              variant="gold"
+              size="md"
+              loading={creatingAct}
+              onPress={handleCreateActivity}
+              style={{ marginTop: 12 }}
+            />
           </View>
         </View>
       </Modal>
@@ -322,61 +384,259 @@ const NowScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  scrollContent: { padding: 16 },
-  bannerCard: { borderRadius: 20, padding: 18, marginBottom: 20 },
-  bannerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  liveTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ECC71', marginRight: 6 },
-  liveText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
-  changeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  changeBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
-  bannerTitle: { color: '#FFF', fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  bannerSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginBottom: 16 },
-  bannerActions: { flexDirection: 'row', gap: 10 },
-  primaryActionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  primaryActionText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
-  secondaryActionBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 12, paddingVertical: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  secondaryActionText: { color: '#FFF', fontWeight: '800', fontSize: 12 },
-
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 14, fontWeight: '900', color: '#2C3E50', textTransform: 'uppercase' },
-
-  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
-  userInfo: { flex: 1 },
-  userName: { fontSize: 14, fontWeight: '800', color: '#2C3E50' },
-  userStatus: { fontSize: 12, fontWeight: '600', color: '#27AE60', marginTop: 2 },
-  connectBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
-  connectBtnText: { color: '#FFF', fontWeight: '800', fontSize: 12 },
-
-  actCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-  actCategory: { fontSize: 10, fontWeight: '900', color: colors.primary, marginBottom: 4 },
-  actTitle: { fontSize: 15, fontWeight: '800', color: '#2C3E50' },
-  actDesc: { fontSize: 12, color: '#7F8C8D', marginVertical: 6 },
-  actFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: '#ECF0F1', paddingTop: 8 },
-  actLoc: { fontSize: 12, color: '#95A5A6' },
-  joinBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
-  joinBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
-
-  emptyCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, alignItems: 'center' },
-  emptyText: { color: '#95A5A6', fontSize: 12, fontWeight: '600' },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalBox: { backgroundColor: '#FFF', borderRadius: 20, padding: 20 },
-  modalTitle: { fontSize: 16, fontWeight: '900', color: '#2C3E50', marginBottom: 14 },
-  input: { borderWidth: 1, borderColor: '#BDC3C7', borderRadius: 12, padding: 12, fontSize: 13, marginBottom: 12 },
-  label: { fontSize: 12, fontWeight: '700', color: '#7F8C8D', marginBottom: 8 },
-  hoursRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  hourChip: { flex: 1, borderWidth: 1, borderColor: '#BDC3C7', borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
-  hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  hourChipText: { fontSize: 12, fontWeight: '700', color: '#7F8C8D' },
-  hourChipTextActive: { color: '#FFF' },
-  modalActions: { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  cancelBtnText: { color: '#7F8C8D', fontWeight: '700' },
-  confirmBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  confirmBtnText: { color: '#FFF', fontWeight: '800' },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm + 2,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  content: {
+    padding: theme.spacing.md,
+    paddingBottom: 40,
+  },
+  myAvailCard: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadow.md,
+  },
+  availGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  availTextCol: {
+    flex: 1,
+  },
+  availCardTitle: {
+    fontSize: theme.fontSize.md + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.white,
+  },
+  availCardDesc: {
+    fontSize: theme.fontSize.xs,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
+  },
+  availToggleBtn: {
+    backgroundColor: theme.colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: theme.borderRadius.full,
+    marginLeft: 12,
+  },
+  availToggleText: {
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.gold,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: theme.fontSize.md + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  horizontalUsersList: {
+    paddingVertical: theme.spacing.xs,
+  },
+  userCard: {
+    width: 120,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.sm,
+  },
+  userAvatarContainer: {
+    position: 'relative',
+    marginBottom: 6,
+  },
+  userAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+  },
+  liveDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.success,
+    borderWidth: 2,
+    borderColor: theme.colors.white,
+  },
+  userName: {
+    fontSize: theme.fontSize.xs + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  userDistance: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  connectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.borderRadius.full,
+  },
+  connectBtnText: {
+    fontSize: theme.fontSize.caption,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.white,
+    marginLeft: 3,
+  },
+  createActPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.secondarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.borderRadius.full,
+  },
+  createActPillText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.secondaryDark,
+    fontWeight: theme.fontWeight.semibold,
+    marginLeft: 2,
+  },
+  activityCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.sm,
+  },
+  actHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  actTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  actTitle: {
+    fontSize: theme.fontSize.sm + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  actDesc: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  actFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: 8,
+  },
+  participantsCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  participantsText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    marginLeft: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    ...theme.shadow.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  inputLabel: {
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textSecondary,
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  quickOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  optChip: {
+    backgroundColor: theme.colors.secondarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
+  },
+  optChipText: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.secondaryDark,
+    fontWeight: theme.fontWeight.medium,
+  },
 });
 
 export default NowScreen;

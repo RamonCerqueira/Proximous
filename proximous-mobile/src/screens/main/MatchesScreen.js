@@ -1,63 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
+  Image,
   RefreshControl,
   Alert,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { matchingAPI } from '../../config/api';
-import { formatUserAge, formatDistance, formatDateTime } from '../../utils/helpers';
+import { formatDateTime, formatDistance, generateAvatarUrl } from '../../utils/helpers';
 import { theme } from '../../styles/colors';
+import EmptyState from '../../components/common/EmptyState';
 
 const MatchesScreen = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('matches');
+  const [activeTab, setActiveTab] = useState('matches'); // matches, received, sent
   const [matches, setMatches] = useState([]);
   const [sentLikes, setSentLikes] = useState([]);
   const [receivedLikes, setReceivedLikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchMatchesData = useCallback(async () => {
     try {
-      setLoading(true);
-      
-      const [matchesRes, sentRes, receivedRes] = await Promise.all([
+      const [matchesRes, sentRes, receivedRes] = await Promise.allSettled([
         matchingAPI.getMatches({ limit: 50 }),
         matchingAPI.getSentLikes({ limit: 50 }),
-        matchingAPI.getReceivedLikes({ limit: 50 })
+        matchingAPI.getReceivedLikes({ limit: 50 }),
       ]);
 
-      setMatches(matchesRes.data.matches || []);
-      setSentLikes(sentRes.data.likes || []);
-      setReceivedLikes(receivedRes.data.likes || []);
+      if (matchesRes.status === 'fulfilled' && matchesRes.value.data) {
+        setMatches(matchesRes.value.data.matches || []);
+      }
+      if (sentRes.status === 'fulfilled' && sentRes.value.data) {
+        setSentLikes(sentRes.value.data.likes || []);
+      }
+      if (receivedRes.status === 'fulfilled' && receivedRes.value.data) {
+        setReceivedLikes(receivedRes.value.data.likes || []);
+      }
     } catch (error) {
-      console.error('Error fetching matches data:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados. Tente novamente.');
+      console.error('Erro ao buscar matches:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const onRefresh = async () => {
+  useEffect(() => {
+    fetchMatchesData();
+  }, [fetchMatchesData]);
+
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
+    fetchMatchesData();
   };
 
-  const handleUnmatch = async (matchId) => {
+  const handleUnmatch = (matchId, userName) => {
     Alert.alert(
-      'Desfazer match',
-      'Tem certeza que deseja desfazer este match? Esta ação não pode ser desfeita.',
+      'Desfazer Conexão',
+      `Deseja desfazer o match com ${userName}? Vocês não poderão mais trocar mensagens.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -66,243 +70,150 @@ const MatchesScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               await matchingAPI.unmatch(matchId);
-              setMatches(prev => prev.filter(match => match.id !== matchId));
-            } catch (error) {
+              setMatches(prev => prev.filter(m => m.id !== matchId));
+            } catch (err) {
               Alert.alert('Erro', 'Não foi possível desfazer o match.');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const handleStartConversation = (match) => {
+  const handleOpenChat = (targetUser) => {
     navigation.navigate('Messages', {
-      screen: 'Conversation',
-      params: { userId: match.user.id, userName: match.user.name }
+      screen: 'Chat',
+      params: {
+        conversationId: targetUser.id,
+        userName: targetUser.name,
+        userAvatar: targetUser.avatar_url || generateAvatarUrl(targetUser.name),
+      },
     });
   };
 
-  const TabButton = ({ title, isActive, onPress, count }) => (
-    <TouchableOpacity
-      style={[styles.tabButton, isActive && styles.tabButtonActive]}
-      onPress={onPress}
-    >
-      <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
-        {title}
-      </Text>
-      {count > 0 && (
-        <View style={styles.tabBadge}>
-          <Text style={styles.tabBadgeText}>{count}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-
-  const MatchCard = ({ match }) => (
-    <TouchableOpacity
-      style={styles.matchCard}
-      onPress={() => handleStartConversation(match)}
-    >
-      <View style={styles.matchPhotoContainer}>
-        <View style={styles.matchPhoto}>
-          <Ionicons name="person" size={40} color={theme.colors.textSecondary} />
-        </View>
-        {match.is_new && <View style={styles.newMatchBadge} />}
-      </View>
-      
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>
-          {match.user.name}, {formatUserAge(match.user.birth_date)}
-        </Text>
-        <Text style={styles.matchDistance}>
-          {formatDistance(match.user.distance || 0)} • {formatDateTime(match.created_at)}
-        </Text>
-        {match.last_message && (
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {match.last_message}
-          </Text>
-        )}
-      </View>
-      
-      <TouchableOpacity
-        style={styles.matchActions}
-        onPress={() => handleUnmatch(match.id)}
-      >
-        <Ionicons name="ellipsis-vertical" size={20} color={theme.colors.textSecondary} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  const LikeCard = ({ like, type }) => (
-    <TouchableOpacity style={styles.likeCard}>
-      <View style={styles.likePhotoContainer}>
-        <View style={styles.likePhoto}>
-          <Ionicons name="person" size={32} color={theme.colors.textSecondary} />
-        </View>
-        {like.like_type === 'super_like' && (
-          <View style={styles.superLikeBadge}>
-            <Ionicons name="star" size={12} color={theme.colors.warning} />
-          </View>
-        )}
-      </View>
-      
-      <Text style={styles.likeName} numberOfLines={1}>
-        {like.user.name}
-      </Text>
-      <Text style={styles.likeAge}>
-        {formatUserAge(like.user.birth_date)}
-      </Text>
-      <Text style={styles.likeTime}>
-        {formatDateTime(like.created_at)}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const EmptyState = ({ type }) => {
-    const messages = {
-      matches: {
-        icon: 'heart-outline',
-        title: 'Nenhum match ainda',
-        subtitle: 'Continue descobrindo pessoas para encontrar seus matches!'
-      },
-      sent: {
-        icon: 'paper-plane-outline',
-        title: 'Nenhuma curtida enviada',
-        subtitle: 'Comece a curtir pessoas na aba Descobrir!'
-      },
-      received: {
-        icon: 'heart-outline',
-        title: 'Nenhuma curtida recebida',
-        subtitle: 'Complete seu perfil para receber mais curtidas!'
-      }
-    };
-
-    const message = messages[type];
+  const renderMatchItem = ({ item }) => {
+    const targetUser = item.user || {};
+    const avatar = targetUser.avatar_url || generateAvatarUrl(targetUser.name || 'User');
+    const distanceText = targetUser.distance_km != null ? formatDistance(targetUser.distance_km) : 'Por perto';
 
     return (
-      <View style={styles.emptyState}>
-        <Ionicons name={message.icon} size={80} color={theme.colors.textSecondary} />
-        <Text style={styles.emptyStateTitle}>{message.title}</Text>
-        <Text style={styles.emptyStateSubtitle}>{message.subtitle}</Text>
+      <View style={styles.matchCard}>
+        <Image source={{ uri: avatar }} style={styles.matchAvatar} />
+        
+        <View style={styles.matchMeta}>
+          <Text style={styles.matchName}>{targetUser.name}</Text>
+          <View style={styles.distanceRow}>
+            <Ionicons name="location-sharp" size={12} color={theme.colors.gold} />
+            <Text style={styles.distanceText}>{distanceText}</Text>
+          </View>
+        </View>
+
+        <View style={styles.matchActions}>
+          <TouchableOpacity
+            style={styles.chatActionBtn}
+            onPress={() => handleOpenChat(targetUser)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble" size={16} color={theme.colors.white} />
+            <Text style={styles.chatActionText}>Conversar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.unmatchBtn}
+            onPress={() => handleUnmatch(item.id, targetUser.name)}
+          >
+            <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <Text>Carregando...</Text>
+  const renderLikeItem = ({ item }) => {
+    const targetUser = item.user || item.target_user || {};
+    const avatar = targetUser.avatar_url || generateAvatarUrl(targetUser.name || 'User');
+
+    return (
+      <View style={styles.likeCard}>
+        <Image source={{ uri: avatar }} style={styles.likeAvatar} />
+        <View style={styles.likeMeta}>
+          <Text style={styles.likeName}>{targetUser.name}</Text>
+          <Text style={styles.likeDate}>{formatDateTime(item.created_at)}</Text>
         </View>
-      );
-    }
-
-    switch (activeTab) {
-      case 'matches':
-        return matches.length > 0 ? (
-          <FlatList
-            data={matches}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <MatchCard match={item} />}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-          />
-        ) : (
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            contentContainerStyle={styles.scrollContent}
-          >
-            <EmptyState type="matches" />
-          </ScrollView>
-        );
-
-      case 'sent':
-        return sentLikes.length > 0 ? (
-          <FlatList
-            data={sentLikes}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <LikeCard like={item} type="sent" />}
-            numColumns={2}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.gridContent}
-          />
-        ) : (
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            contentContainerStyle={styles.scrollContent}
-          >
-            <EmptyState type="sent" />
-          </ScrollView>
-        );
-
-      case 'received':
-        return receivedLikes.length > 0 ? (
-          <FlatList
-            data={receivedLikes}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <LikeCard like={item} type="received" />}
-            numColumns={2}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.gridContent}
-          />
-        ) : (
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            contentContainerStyle={styles.scrollContent}
-          >
-            <EmptyState type="received" />
-          </ScrollView>
-        );
-
-      default:
-        return null;
-    }
+        <Ionicons
+          name={item.like_type === 'super_like' ? 'star' : 'heart'}
+          size={20}
+          color={item.like_type === 'super_like' ? theme.colors.gold : theme.colors.heart}
+        />
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TabButton
-          title="Matches"
-          isActive={activeTab === 'matches'}
-          onPress={() => setActiveTab('matches')}
-          count={matches.length}
-        />
-        <TabButton
-          title="Enviadas"
-          isActive={activeTab === 'sent'}
-          onPress={() => setActiveTab('sent')}
-          count={sentLikes.length}
-        />
-        <TabButton
-          title="Recebidas"
-          isActive={activeTab === 'received'}
-          onPress={() => setActiveTab('received')}
-          count={receivedLikes.length}
-        />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Conexões & Curtidas</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        {renderContent()}
+      {/* Tabs */}
+      <View style={styles.tabsRow}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'matches' && styles.tabActive]}
+          onPress={() => setActiveTab('matches')}
+        >
+          <Text style={[styles.tabText, activeTab === 'matches' && styles.tabTextActive]}>
+            Matches ({matches.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'received' && styles.tabActive]}
+          onPress={() => setActiveTab('received')}
+        >
+          <Text style={[styles.tabText, activeTab === 'received' && styles.tabTextActive]}>
+            Recebidas ({receivedLikes.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'sent' && styles.tabActive]}
+          onPress={() => setActiveTab('sent')}
+        >
+          <Text style={[styles.tabText, activeTab === 'sent' && styles.tabTextActive]}>
+            Enviadas ({sentLikes.length})
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* List */}
+      <FlatList
+        data={activeTab === 'matches' ? matches : activeTab === 'received' ? receivedLikes : sentLikes}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={activeTab === 'matches' ? renderMatchItem : renderLikeItem}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon={activeTab === 'matches' ? 'heart-dislike-outline' : 'heart-outline'}
+            title={activeTab === 'matches' ? 'Nenhum match ainda' : 'Nenhuma curtida encontrada'}
+            description={
+              activeTab === 'matches'
+                ? 'Continue descobrindo pessoas por perto para encontrar novas conexões.'
+                : 'Quando alguém curtir seu perfil, as curtidas aparecerão aqui.'
+            }
+            actionTitle="Ir para Descoberta"
+            onActionPress={() => navigation.navigate('Discover')}
+          />
+        }
+      />
     </SafeAreaView>
   );
 };
@@ -312,224 +223,143 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.lg,
-  },
-  
-  tabButton: {
-    flex: 1,
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  tab: {
+    flex: 1,
     paddingVertical: theme.spacing.md,
+    alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  
-  tabButtonActive: {
+  tabActive: {
     borderBottomColor: theme.colors.primary,
   },
-  
-  tabButtonText: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.medium,
+  tabText: {
+    fontSize: theme.fontSize.xs + 1,
+    fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textSecondary,
   },
-  
-  tabButtonTextActive: {
+  tabTextActive: {
     color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
   },
-  
-  tabBadge: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: theme.spacing.sm,
-  },
-  
-  tabBadgeText: {
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.white,
-    fontWeight: theme.fontWeight.bold,
-  },
-  
-  content: {
-    flex: 1,
-  },
-  
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
   listContent: {
-    paddingVertical: theme.spacing.md,
+    padding: theme.spacing.md,
+    paddingBottom: 40,
   },
-  
-  gridContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-  },
-  
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.white,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     ...theme.shadow.sm,
   },
-  
-  matchPhotoContainer: {
-    position: 'relative',
-    marginRight: theme.spacing.md,
+  matchAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.primarySoft,
   },
-  
-  matchPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.gray[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  newMatchBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.success,
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-  },
-  
-  matchInfo: {
+  matchMeta: {
     flex: 1,
+    marginLeft: theme.spacing.md,
   },
-  
   matchName: {
     fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  matchDistance: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  lastMessage: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textTertiary,
-    fontStyle: 'italic',
-  },
-  
-  matchActions: {
-    padding: theme.spacing.sm,
-  },
-  
-  likeCard: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: theme.colors.white,
-    margin: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadow.sm,
-  },
-  
-  likePhotoContainer: {
-    position: 'relative',
-    marginBottom: theme.spacing.sm,
-  },
-  
-  likePhoto: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.gray[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  superLikeBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.colors.warning,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-  },
-  
-  likeName: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  
-  likeAge: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  likeTime: {
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textTertiary,
-  },
-  
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-  },
-  
-  emptyStateTitle: {
-    fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
   },
-  
-  emptyStateSubtitle: {
-    fontSize: theme.fontSize.md,
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  distanceText: {
+    fontSize: theme.fontSize.caption,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: theme.lineHeight.relaxed,
+    marginLeft: 3,
+  },
+  matchActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.borderRadius.full,
+    marginRight: 6,
+  },
+  chatActionText: {
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.white,
+    marginLeft: 4,
+  },
+  unmatchBtn: {
+    padding: 6,
+  },
+  likeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  likeAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  likeMeta: {
+    flex: 1,
+    marginLeft: theme.spacing.md,
+  },
+  likeName: {
+    fontSize: theme.fontSize.sm + 1,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  likeDate: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
 });
 
 export default MatchesScreen;
-
